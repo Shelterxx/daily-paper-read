@@ -120,7 +120,7 @@
 | FETH-04 | Phase 2 | Pending |
 | FETH-05 | Phase 1 | Pending |
 | ANLY-01 | Phase 1 | Pending |
-| ANLY-02 | Phase 2 | Pending |
+| ANLY-02 | Phase 1 | Pending |
 | ANLY-03 | Phase 3 | Pending |
 | ANLY-04 | Phase 3 | Pending |
 | ANLY-05 | Phase 1 | Pending |
@@ -144,10 +144,10 @@
 | PIPE-04 | Phase 1 | Pending |
 
 **Coverage:**
-- v1 requirements: 35 total
-- Mapped to phases: 35
+- v1 requirements: 41 total
+- Mapped to phases: 41
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-04-13 after initial definition*
+*Last updated: 2026-04-13 after roadmap creation*
