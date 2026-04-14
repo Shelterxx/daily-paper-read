@@ -15,14 +15,14 @@
 
 ### Literature Search
 
-- [ ] **SRCH-01**: System searches arXiv for papers matching configured queries with date filtering
+- [x] **SRCH-01**: System searches arXiv for papers matching configured queries with date filtering
 - [ ] **SRCH-02**: System searches PubMed via E-utilities for papers matching configured queries
 - [ ] **SRCH-03**: System searches OpenAlex for papers matching configured queries
 - [ ] **SRCH-04**: System searches Semantic Scholar for papers matching configured queries
 - [ ] **SRCH-05**: System resolves DOIs to paper metadata via content negotiation
-- [ ] **SRCH-06**: System deduplicates results across all sources by DOI and normalized title hash
+- [x] **SRCH-06**: System deduplicates results across all sources by DOI and normalized title hash
 - [ ] **SRCH-07**: System tracks seen papers in persistent state file to avoid re-pushing across daily runs
-- [ ] **SRCH-08**: System runs search queries in parallel across enabled sources via asyncio
+- [x] **SRCH-08**: System runs search queries in parallel across enabled sources via asyncio
 
 ### Content Fetching
 
@@ -30,7 +30,7 @@
 - [ ] **FETH-02**: System downloads open-access PDFs from PubMed Central
 - [ ] **FETH-03**: System resolves open-access PDF URLs via Unpaywall API for DOI-resolved papers
 - [ ] **FETH-04**: System extracts full text from downloaded PDFs via PyMuPDF for AI analysis
-- [ ] **FETH-05**: System gracefully falls back to abstract-only processing when PDF is unavailable
+- [x] **FETH-05**: System gracefully falls back to abstract-only processing when PDF is unavailable
 
 ### AI Analysis
 
@@ -106,19 +106,19 @@
 | CONF-03 | Phase 1 | Pending |
 | CONF-04 | Phase 1 | Pending |
 | CONF-05 | Phase 1 | Pending |
-| SRCH-01 | Phase 1 | Pending |
+| SRCH-01 | Phase 1 | Complete |
 | SRCH-02 | Phase 2 | Pending |
 | SRCH-03 | Phase 2 | Pending |
 | SRCH-04 | Phase 2 | Pending |
 | SRCH-05 | Phase 2 | Pending |
-| SRCH-06 | Phase 1 | Pending |
+| SRCH-06 | Phase 1 | Complete |
 | SRCH-07 | Phase 1 | Pending |
-| SRCH-08 | Phase 1 | Pending |
+| SRCH-08 | Phase 1 | Complete |
 | FETH-01 | Phase 2 | Pending |
 | FETH-02 | Phase 2 | Pending |
 | FETH-03 | Phase 2 | Pending |
 | FETH-04 | Phase 2 | Pending |
-| FETH-05 | Phase 1 | Pending |
+| FETH-05 | Phase 1 | Complete |
 | ANLY-01 | Phase 1 | Pending |
 | ANLY-02 | Phase 1 | Pending |
 | ANLY-03 | Phase 3 | Pending |
