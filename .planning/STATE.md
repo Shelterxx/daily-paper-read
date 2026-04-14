@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 01-05-PLAN.md (Phase 01 Complete)
-last_updated: "2026-04-14T03:57:28.400Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-04-14T12:36:21.290Z"
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 8
+  completed_plans: 6
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Every morning, a researcher sees a prioritized, AI-analyzed digest of the most relevant new papers in their field — with one click to archive to Zotero or add to their Obsidian knowledge base.
-**Current focus:** Phase 01 — End-to-End Pipeline Proof
+**Current focus:** Phase 02 — Multi-Source Search and PDF Fetching
 
 ## Current Position
 
-Phase: 01 (End-to-End Pipeline Proof) — COMPLETE
-Plan: 5 of 5 (all plans done)
+Phase: 02 (Multi-Source Search and PDF Fetching) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Plan: 5 of 5 (all plans done)
 | Phase 01 P01 | 11min | 2 tasks | 14 files |
 | Phase 01 P04 | 5min | 2 tasks | 4 files |
 | Phase 01 P05 | 5min | 2 tasks | 2 files |
+| Phase 02 P02 | 4min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,9 @@ Recent decisions affecting current work:
 - [Phase 01]: State saved only after successful notification to prevent duplicate pushes on retry
 - [Phase 01]: Papers tracked by originating topic; analysis only scores against that topic (no cross-topic duplication)
 - [Phase 01]: GitHub Actions concurrency group prevents parallel runs; state committed after each run for persistence
+- [Phase 02]: DOI enrichment is additive-only: fills missing fields, never overwrites existing data
+- [Phase 02]: Unpaywall channel silently skipped when UNPAYWALL_EMAIL env var not set
+- [Phase 02]: All download validation delegated to existing fetch_pdf (no duplication)
 
 ### Pending Todos
 
@@ -88,6 +92,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-14T03:45:00Z
-Stopped at: Completed 01-05-PLAN.md (Phase 01 Complete)
+Last session: 2026-04-14T12:36:21.288Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None

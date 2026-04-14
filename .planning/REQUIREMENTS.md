@@ -19,7 +19,7 @@
 - [ ] **SRCH-02**: System searches PubMed via E-utilities for papers matching configured queries
 - [ ] **SRCH-03**: System searches OpenAlex for papers matching configured queries
 - [ ] **SRCH-04**: System searches Semantic Scholar for papers matching configured queries
-- [ ] **SRCH-05**: System resolves DOIs to paper metadata via content negotiation
+- [x] **SRCH-05**: System resolves DOIs to paper metadata via content negotiation
 - [x] **SRCH-06**: System deduplicates results across all sources by DOI and normalized title hash
 - [x] **SRCH-07**: System tracks seen papers in persistent state file to avoid re-pushing across daily runs
 - [x] **SRCH-08**: System runs search queries in parallel across enabled sources via asyncio
@@ -27,8 +27,8 @@
 ### Content Fetching
 
 - [ ] **FETH-01**: System downloads open-access PDFs from arXiv using direct HTTP
-- [ ] **FETH-02**: System downloads open-access PDFs from PubMed Central
-- [ ] **FETH-03**: System resolves open-access PDF URLs via Unpaywall API for DOI-resolved papers
+- [x] **FETH-02**: System downloads open-access PDFs from PubMed Central
+- [x] **FETH-03**: System resolves open-access PDF URLs via Unpaywall API for DOI-resolved papers
 - [ ] **FETH-04**: System extracts full text from downloaded PDFs via PyMuPDF for AI analysis
 - [x] **FETH-05**: System gracefully falls back to abstract-only processing when PDF is unavailable
 
@@ -110,13 +110,13 @@
 | SRCH-02 | Phase 2 | Pending |
 | SRCH-03 | Phase 2 | Pending |
 | SRCH-04 | Phase 2 | Pending |
-| SRCH-05 | Phase 2 | Pending |
+| SRCH-05 | Phase 2 | Complete |
 | SRCH-06 | Phase 1 | Complete |
 | SRCH-07 | Phase 1 | Complete |
 | SRCH-08 | Phase 1 | Complete |
 | FETH-01 | Phase 2 | Pending |
-| FETH-02 | Phase 2 | Pending |
-| FETH-03 | Phase 2 | Pending |
+| FETH-02 | Phase 2 | Complete |
+| FETH-03 | Phase 2 | Complete |
 | FETH-04 | Phase 2 | Pending |
 | FETH-05 | Phase 1 | Complete |
 | ANLY-01 | Phase 1 | Complete |
