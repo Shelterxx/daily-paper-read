@@ -43,17 +43,17 @@ Plans:
 **Depends on**: Phase 1
 **Requirements**: SRCH-02, SRCH-03, SRCH-04, SRCH-05, FETH-01, FETH-02, FETH-03, FETH-04
 **Success Criteria** (what must be TRUE):
-  1. User can enable PubMed, OpenAlex, Semantic Scholar, and DOI resolution in config and receive papers from all enabled sources in a single daily run
+  1. User can enable sci_search, OpenAlex, Semantic Scholar, and DOI resolution in config and receive papers from all enabled sources in a single daily run
   2. Papers appearing in multiple sources appear only once in the final digest (deduplicated by DOI and normalized title)
   3. For papers where an open-access PDF is available, the AI analysis incorporates extracted full text rather than relying solely on the abstract
   4. When a PDF download fails (timeout, 403, corrupt file), the system falls back to abstract-only processing and the paper still appears in the digest
   5. All source searches run in parallel and the pipeline completes within 30 minutes even with all sources enabled
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
-- [ ] 02-03: TBD
+- [ ] 02-01-PLAN.md -- Config expansion + sci_search, OpenAlex, Semantic Scholar search adapters
+- [ ] 02-02-PLAN.md -- DOI content negotiation resolver + multi-channel PDF fetcher (Unpaywall, PMC)
+- [ ] 02-03-PLAN.md -- Pipeline integration: multi-source search, DOI enrichment, multi-channel PDF in main.py
 
 ### Phase 3: Advanced AI Analysis
 **Goal**: High-relevance papers receive deep methodology analysis and comparative analysis against related work, delivering genuine research insight
@@ -95,6 +95,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. End-to-End Pipeline Proof | 0/5 | Planning complete | - |
-| 2. Multi-Source Search and PDF Fetching | 0/? | Not started | - |
+| 2. Multi-Source Search and PDF Fetching | 0/3 | Planning complete | - |
 | 3. Advanced AI Analysis | 0/? | Not started | - |
 | 4. Zotero and Obsidian Integrations | 0/? | Not started | - |
