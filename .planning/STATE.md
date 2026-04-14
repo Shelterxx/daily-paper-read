@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-04-14T12:38:48.703Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-04-14T12:49:35Z"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -23,22 +23,23 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 02 (Multi-Source Search and PDF Fetching) — EXECUTING
-Plan: 2 of 3
+Phase: 02 (Multi-Source Search and PDF Fetching) — COMPLETE
+Plan: 3 of 3
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 5
+- Total plans completed: 8
 - Average duration: 7min
-- Total execution time: 0.58 hours
+- Total execution time: 0.70 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-end-to-end-pipeline-proof | 5 | 35min | 7min |
+| 02-multi-source-search | 3 | 17min | 6min |
 
 **Recent Trend:**
 
@@ -52,6 +53,7 @@ Plan: 2 of 3
 | Phase 01 P04 | 5min | 2 tasks | 4 files |
 | Phase 01 P05 | 5min | 2 tasks | 2 files |
 | Phase 02 P02 | 4min | 2 tasks | 3 files |
+| Phase 02 P03 | 7min | 2 tasks | 2 files |
 | Phase 02 P01 | 6 | 2 tasks | 5 files |
 
 ## Accumulated Context
@@ -85,6 +87,10 @@ Recent decisions affecting current work:
 - [Phase 02]: New search sources default to enabled=False for backward compatibility
 - [Phase 02]: tenacity retry only on 5xx server errors, not 4xx client errors
 - [Phase 02]: S2 uses 3 retry attempts vs 2 for other sources due to flakier API
+- [Phase 02]: Source adapters wrapped in try/except at instantiation -- missing adapter skips with warning
+- [Phase 02]: Topic-level source config overrides global config (topic_cfg.enabled if not None else global_cfg.enabled)
+- [Phase 02]: DOI enrichment runs after dedup+filter to avoid wasting API calls on duplicates
+- [Phase 02]: fetch_pdf_multi_channel replaces fetch_and_enrich_paper for all PDF fetching
 
 ### Pending Todos
 
@@ -96,6 +102,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-14T12:38:48.701Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-04-14T12:49:35Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None

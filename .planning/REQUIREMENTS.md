@@ -26,10 +26,10 @@
 
 ### Content Fetching
 
-- [ ] **FETH-01**: System downloads open-access PDFs from arXiv using direct HTTP
+- [x] **FETH-01**: System downloads open-access PDFs from arXiv using direct HTTP
 - [x] **FETH-02**: System downloads open-access PDFs from PubMed Central
 - [x] **FETH-03**: System resolves open-access PDF URLs via Unpaywall API for DOI-resolved papers
-- [ ] **FETH-04**: System extracts full text from downloaded PDFs via PyMuPDF for AI analysis
+- [x] **FETH-04**: System extracts full text from downloaded PDFs via PyMuPDF for AI analysis
 - [x] **FETH-05**: System gracefully falls back to abstract-only processing when PDF is unavailable
 
 ### AI Analysis
@@ -114,10 +114,10 @@
 | SRCH-06 | Phase 1 | Complete |
 | SRCH-07 | Phase 1 | Complete |
 | SRCH-08 | Phase 1 | Complete |
-| FETH-01 | Phase 2 | Pending |
+| FETH-01 | Phase 2 | Complete |
 | FETH-02 | Phase 2 | Complete |
 | FETH-03 | Phase 2 | Complete |
-| FETH-04 | Phase 2 | Pending |
+| FETH-04 | Phase 2 | Complete |
 | FETH-05 | Phase 1 | Complete |
 | ANLY-01 | Phase 1 | Complete |
 | ANLY-02 | Phase 1 | Complete |
