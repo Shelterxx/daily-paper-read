@@ -42,9 +42,9 @@
 
 ### Notification
 
-- [ ] **NTFY-01**: System pushes tiered literature digest to Feishu/Lark via webhook as rich message cards
-- [ ] **NTFY-02**: Feishu messages include paper title, authors, relevance score, AI analysis (tiered), and direct links
-- [ ] **NTFY-03**: System splits large digests into multiple messages if content exceeds Feishu message size limits
+- [x] **NTFY-01**: System pushes tiered literature digest to Feishu/Lark via webhook as rich message cards
+- [x] **NTFY-02**: Feishu messages include paper title, authors, relevance score, AI analysis (tiered), and direct links
+- [x] **NTFY-03**: System splits large digests into multiple messages if content exceeds Feishu message size limits
 
 ### Zotero Integration
 
@@ -124,9 +124,9 @@
 | ANLY-03 | Phase 3 | Pending |
 | ANLY-04 | Phase 3 | Pending |
 | ANLY-05 | Phase 1 | Complete |
-| NTFY-01 | Phase 1 | Pending |
-| NTFY-02 | Phase 1 | Pending |
-| NTFY-03 | Phase 1 | Pending |
+| NTFY-01 | Phase 1 | Complete |
+| NTFY-02 | Phase 1 | Complete |
+| NTFY-03 | Phase 1 | Complete |
 | ZTR-01 | Phase 4 | Pending |
 | ZTR-02 | Phase 4 | Pending |
 | ZTR-03 | Phase 4 | Pending |
