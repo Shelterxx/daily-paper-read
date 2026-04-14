@@ -1,0 +1,11 @@
+{
+  "msg_type": "post",
+  "content": {
+    "post": {
+      "{% if language == 'zh' %}zh_cn{% elif language == 'en' %}en_us{% else %}zh_cn{% endif %}": {
+        "title": {{ title | tojson }},
+        "content": {{ content | tojson }}
+      }
+    }
+  }
+}
