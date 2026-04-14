@@ -7,11 +7,11 @@
 
 ### Configuration
 
-- [ ] **CONF-01**: User can define search queries, research interests, and preferences via a validated YAML config file
-- [ ] **CONF-02**: System provides a well-documented config.example.yaml with sensible defaults for quick setup
-- [ ] **CONF-03**: System loads API credentials from environment variables (GitHub Secrets) with clear error messages for missing keys
-- [ ] **CONF-04**: User can enable/disable individual search sources via config toggles
-- [ ] **CONF-05**: User can configure relevance score thresholds for tiered analysis (high/medium/low cutoffs)
+- [x] **CONF-01**: User can define search queries, research interests, and preferences via a validated YAML config file
+- [x] **CONF-02**: System provides a well-documented config.example.yaml with sensible defaults for quick setup
+- [x] **CONF-03**: System loads API credentials from environment variables (GitHub Secrets) with clear error messages for missing keys
+- [x] **CONF-04**: User can enable/disable individual search sources via config toggles
+- [x] **CONF-05**: User can configure relevance score thresholds for tiered analysis (high/medium/low cutoffs)
 
 ### Literature Search
 
@@ -21,7 +21,7 @@
 - [ ] **SRCH-04**: System searches Semantic Scholar for papers matching configured queries
 - [ ] **SRCH-05**: System resolves DOIs to paper metadata via content negotiation
 - [x] **SRCH-06**: System deduplicates results across all sources by DOI and normalized title hash
-- [ ] **SRCH-07**: System tracks seen papers in persistent state file to avoid re-pushing across daily runs
+- [x] **SRCH-07**: System tracks seen papers in persistent state file to avoid re-pushing across daily runs
 - [x] **SRCH-08**: System runs search queries in parallel across enabled sources via asyncio
 
 ### Content Fetching
@@ -53,7 +53,7 @@
 - [ ] **ZTR-03**: System attaches AI summary as a note to each Zotero item
 - [ ] **ZTR-04**: System attaches downloaded PDFs to corresponding Zotero items
 - [ ] **ZTR-05**: System checks for existing items before creating to avoid duplicates
-- [ ] **ZTR-06**: Zotero integration is fully optional — system works without Zotero credentials
+- [x] **ZTR-06**: Zotero integration is fully optional — system works without Zotero credentials
 
 ### Obsidian Integration
 
@@ -61,7 +61,7 @@
 - [ ] **OBS-02**: System generates daily summary notes listing all pushed papers with relevance tiers
 - [ ] **OBS-03**: System organizes papers by topic/theme with Obsidian backlinks for knowledge graph building
 - [ ] **OBS-04**: System pushes generated notes to an independent Git vault repository via authenticated git push
-- [ ] **OBS-05**: Obsidian integration is fully optional — system works without vault repo configuration
+- [x] **OBS-05**: Obsidian integration is fully optional — system works without vault repo configuration
 
 ### GitHub Actions Pipeline
 
@@ -101,18 +101,18 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CONF-01 | Phase 1 | Pending |
-| CONF-02 | Phase 1 | Pending |
-| CONF-03 | Phase 1 | Pending |
-| CONF-04 | Phase 1 | Pending |
-| CONF-05 | Phase 1 | Pending |
+| CONF-01 | Phase 1 | Complete |
+| CONF-02 | Phase 1 | Complete |
+| CONF-03 | Phase 1 | Complete |
+| CONF-04 | Phase 1 | Complete |
+| CONF-05 | Phase 1 | Complete |
 | SRCH-01 | Phase 1 | Complete |
 | SRCH-02 | Phase 2 | Pending |
 | SRCH-03 | Phase 2 | Pending |
 | SRCH-04 | Phase 2 | Pending |
 | SRCH-05 | Phase 2 | Pending |
 | SRCH-06 | Phase 1 | Complete |
-| SRCH-07 | Phase 1 | Pending |
+| SRCH-07 | Phase 1 | Complete |
 | SRCH-08 | Phase 1 | Complete |
 | FETH-01 | Phase 2 | Pending |
 | FETH-02 | Phase 2 | Pending |
@@ -132,12 +132,12 @@
 | ZTR-03 | Phase 4 | Pending |
 | ZTR-04 | Phase 4 | Pending |
 | ZTR-05 | Phase 4 | Pending |
-| ZTR-06 | Phase 1 | Pending |
+| ZTR-06 | Phase 1 | Complete |
 | OBS-01 | Phase 4 | Pending |
 | OBS-02 | Phase 4 | Pending |
 | OBS-03 | Phase 4 | Pending |
 | OBS-04 | Phase 4 | Pending |
-| OBS-05 | Phase 1 | Pending |
+| OBS-05 | Phase 1 | Complete |
 | PIPE-01 | Phase 1 | Pending |
 | PIPE-02 | Phase 1 | Pending |
 | PIPE-03 | Phase 1 | Pending |

@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-04-14T03:08:33.921Z"
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-04-14T03:09:31.231Z"
 progress:
   total_phases: 4
   completed_phases: 0
@@ -47,6 +47,7 @@ Plan: 2 of 5
 
 *Updated after each plan completion*
 | Phase 01 P02 | 10min | 2 tasks | 8 files |
+| Phase 01 P01 | 11min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,8 @@ Recent decisions affecting current work:
 - ArxivSource uses arxiv library primary + feedparser fallback for robustness
 - PDF magic bytes validation and 50MB size limit for safe PDF processing
 - Minimum 100 chars extracted text threshold to avoid treating blank extraction as full_text
+- [Phase 01]: Use OpenAI SDK (not anthropic) for multi-model support via OpenAI-compatible interface with custom base_url
+- [Phase 01]: Research-topic-centric config: each topic has keywords, thresholds, source overrides; global config is minimal
 
 ### Pending Todos
 
@@ -73,6 +76,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-14T03:06:48Z
-Stopped at: Completed 01-02-PLAN.md
-Resume file: .planning/phases/01-end-to-end-pipeline-proof/01-02-SUMMARY.md
+Last session: 2026-04-14T03:09:31.229Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None
