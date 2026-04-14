@@ -30,14 +30,23 @@ class SourceConfig(BaseModel):
     """Toggle and settings for a search source."""
 
     enabled: bool = True
-    max_results: int = 50
+    max_results: int = 20
 
 
 class SourcesConfig(BaseModel):
     """All search source toggles."""
 
     arxiv: SourceConfig = Field(
-        default_factory=lambda: SourceConfig(enabled=True, max_results=50)
+        default_factory=lambda: SourceConfig(enabled=True, max_results=20)
+    )
+    sci_search: SourceConfig = Field(
+        default_factory=lambda: SourceConfig(enabled=False, max_results=20)
+    )
+    openalex: SourceConfig = Field(
+        default_factory=lambda: SourceConfig(enabled=False, max_results=20)
+    )
+    semantic_scholar: SourceConfig = Field(
+        default_factory=lambda: SourceConfig(enabled=False, max_results=20)
     )
 
 
