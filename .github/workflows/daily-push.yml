@@ -1,0 +1,62 @@
+name: Daily Literature Push
+
+on:
+  # PIPE-01: Daily scheduled cron trigger (UTC 01:00 = Beijing 09:00)
+  schedule:
+    - cron: '0 1 * * *'
+
+  # PIPE-02: Manual workflow dispatch for on-demand execution
+  workflow_dispatch:
+    inputs:
+      config_path:
+        description: 'Path to config file'
+        required: false
+        default: 'config.yaml'
+        type: string
+
+# Prevent concurrent runs to avoid state file conflicts
+concurrency:
+  group: literature-push
+  cancel-in-progress: false
+
+jobs:
+  push-literature:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # PIPE-03: Complete within 30 minutes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create state directory
+        run: mkdir -p state
+
+      - name: Run literature push pipeline
+        id: run-pipeline
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        run: |
+          python -m src.main "${{ github.event.inputs.config_path || 'config.yaml' }}"
+
+      - name: Commit state file
+        if: always() && steps.run-pipeline.outcome != 'cancelled'
+        run: |
+          git config user.name "Literature Push Bot"
+          git config user.email "bot@literature-push"
+          if [ -f state/seen_papers.json ]; then
+            git add state/seen_papers.json
+            git diff --cached --quiet || git commit -m "state: update seen papers $(date +%Y-%m-%d)"
+            git push
+          fi
