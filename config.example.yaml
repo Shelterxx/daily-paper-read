@@ -1,0 +1,43 @@
+# Daily Literature Push Configuration (每日文献推送配置)
+# Copy this file to config.yaml and customize for your research.
+
+# Research topics: each topic defines a search scope with its own queries and thresholds
+research_topics:
+  - name: "LLM Reasoning"
+    # Natural language description of your research direction.
+    # The system will use LLM to extract search keywords from this description.
+    description: "Research on reasoning capabilities of large language models, including chain-of-thought, planning, and multi-step problem solving"
+    # Optional: manually specify keywords to override automatic extraction
+    # keywords: ["chain-of-thought", "LLM reasoning", "planning"]
+    max_push: 20           # Max papers to push per topic per run
+    relevance_thresholds:
+      high: 7              # Score >= 7: full analysis with contributions and applications
+      medium: 4            # Score >= 4: summary + key contributions
+
+  - name: "Multi-Agent RL"
+    description: "Multi-agent reinforcement learning, cooperative and competitive settings, emergent communication"
+    max_push: 15
+
+# Global source toggles (individual topics can override)
+sources:
+  arxiv:
+    enabled: true
+    max_results: 50
+
+# LLM API configuration (supports Claude, GLM, DeepSeek, MiniMax via OpenAI-compatible interface)
+llm:
+  scoring_model: "claude-3-5-haiku-20241022"    # Fast model for batch scoring
+  analysis_model: "claude-3-5-sonnet-20241022"   # Capable model for deep analysis
+  base_url: "https://api.anthropic.com/v1/"       # Change for other providers
+  api_key_env: "LLM_API_KEY"                      # Name of env var holding API key
+
+# Notification settings
+notification:
+  feishu_webhook_env: "FEISHU_WEBHOOK_URL"        # Name of env var holding Feishu webhook URL
+  language: "zh"                                    # Output language: zh, en, or mixed
+
+# How far back to search for new papers (hours)
+search_timeframe_hours: 24
+
+# State directory for tracking seen papers (relative to repo root)
+state_dir: "state"
