@@ -12,7 +12,7 @@ This roadmap delivers a GitHub Actions-based daily academic literature push syst
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: End-to-End Pipeline Proof** - Config, arXiv search, basic AI analysis, Feishu notification, GitHub Actions workflow
+- [x] **Phase 1: End-to-End Pipeline Proof** - Config, arXiv search, basic AI analysis, Feishu notification, GitHub Actions workflow
 - [ ] **Phase 2: Multi-Source Search and PDF Fetching** - All five search sources, PDF download pipeline, cross-source deduplication
 - [ ] **Phase 3: Advanced AI Analysis** - Deep analysis, comparative analysis, pipeline hardening and error handling
 - [ ] **Phase 4: Zotero and Obsidian Integrations** - Zotero archiving with PDFs and notes, Obsidian vault knowledge base generation
@@ -32,11 +32,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 5 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Config layer, data models, state management, example config
-- [ ] 01-02-PLAN.md -- ArXiv search adapter, deduplication, PDF fetch and text extraction
-- [ ] 01-03-PLAN.md -- AI analysis pipeline (two-stage scoring + deep analysis + keyword extraction)
-- [ ] 01-04-PLAN.md -- Feishu notification with tiered rich message cards
-- [ ] 01-05-PLAN.md -- Pipeline orchestrator and GitHub Actions workflow
+- [x] 01-01-PLAN.md -- Config layer, data models, state management, example config
+- [x] 01-02-PLAN.md -- ArXiv search adapter, deduplication, PDF fetch and text extraction
+- [x] 01-03-PLAN.md -- AI analysis pipeline (two-stage scoring + deep analysis + keyword extraction)
+- [x] 01-04-PLAN.md -- Feishu notification with tiered rich message cards
+- [x] 01-05-PLAN.md -- Pipeline orchestrator and GitHub Actions workflow
 
 ### Phase 2: Multi-Source Search and PDF Fetching
 **Goal**: Researchers get broad academic coverage from all five sources with full-text PDF support for AI analysis

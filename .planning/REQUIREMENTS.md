@@ -65,10 +65,10 @@
 
 ### GitHub Actions Pipeline
 
-- [ ] **PIPE-01**: System runs as a GitHub Actions workflow with daily scheduled cron trigger
-- [ ] **PIPE-02**: System supports manual workflow_dispatch trigger for on-demand execution
-- [ ] **PIPE-03**: Pipeline completes within 30 minutes for typical runs (under 100 new papers)
-- [ ] **PIPE-04**: Pipeline handles partial failures gracefully — one source failure does not block others
+- [x] **PIPE-01**: System runs as a GitHub Actions workflow with daily scheduled cron trigger
+- [x] **PIPE-02**: System supports manual workflow_dispatch trigger for on-demand execution
+- [x] **PIPE-03**: Pipeline completes within 30 minutes for typical runs (under 100 new papers)
+- [x] **PIPE-04**: Pipeline handles partial failures gracefully — one source failure does not block others
 
 ## v2 Requirements
 
@@ -138,10 +138,10 @@
 | OBS-03 | Phase 4 | Pending |
 | OBS-04 | Phase 4 | Pending |
 | OBS-05 | Phase 1 | Complete |
-| PIPE-01 | Phase 1 | Pending |
-| PIPE-02 | Phase 1 | Pending |
-| PIPE-03 | Phase 1 | Pending |
-| PIPE-04 | Phase 1 | Pending |
+| PIPE-01 | Phase 1 | Complete |
+| PIPE-02 | Phase 1 | Complete |
+| PIPE-03 | Phase 1 | Complete |
+| PIPE-04 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 41 total
