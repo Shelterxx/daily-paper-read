@@ -1,5 +1,20 @@
 # Daily Literature Push Configuration (每日文献推送配置)
 # Copy this file to config.yaml and customize for your research.
+#
+# Environment Variables Reference:
+# ──────────────────────────────────────────────────────────
+# Required:
+#   LLM_API_KEY           - API key for LLM scoring/analysis
+#   FEISHU_WEBHOOK_URL     - Feishu bot webhook URL
+#
+# Search Sources (set these to enable additional sources):
+#   SCI_SEARCH_API_TOKEN  - API token for sci_search (Supabase Edge Function)
+#   S2_API_KEY            - Semantic Scholar API key (optional, higher rate limits)
+#   OPENALEX_EMAIL        - Email for OpenAlex polite pool (optional, 10 req/s)
+#
+# PDF Fetching (multi-channel):
+#   UNPAYWALL_EMAIL       - Email for Unpaywall OA PDF lookup (optional)
+# ──────────────────────────────────────────────────────────
 
 # Research topics: each topic defines a search scope with its own queries and thresholds
 research_topics:
@@ -9,20 +24,30 @@ research_topics:
     description: "Research on reasoning capabilities of large language models, including chain-of-thought, planning, and multi-step problem solving"
     # Optional: manually specify keywords to override automatic extraction
     # keywords: ["chain-of-thought", "LLM reasoning", "planning"]
-    max_push: 20           # Max papers to push per topic per run
+    max_push: 10           # Max papers to push per topic per run
     relevance_thresholds:
-      high: 7              # Score >= 7: full analysis with contributions and applications
-      medium: 4            # Score >= 4: summary + key contributions
+      high: 8              # Score >= 8: full analysis with contributions and applications
+      medium: 6            # Score >= 6: summary + key contributions
 
   - name: "Multi-Agent RL"
     description: "Multi-agent reinforcement learning, cooperative and competitive settings, emergent communication"
-    max_push: 15
+    max_push: 10
 
 # Global source toggles (individual topics can override)
+# Enable/disable each search source. Each source can have max_results configured.
 sources:
   arxiv:
     enabled: true
-    max_results: 50
+    max_results: 20
+  sci_search:
+    enabled: false           # Requires SCI_SEARCH_API_TOKEN env var
+    max_results: 20
+  openalex:
+    enabled: false           # Set OPENALEX_EMAIL env var for polite pool (10 req/s)
+    max_results: 20
+  semantic_scholar:
+    enabled: false           # Optional S2_API_KEY env var for higher rate limits
+    max_results: 20
 
 # LLM API configuration (supports Claude, GLM, DeepSeek, MiniMax via OpenAI-compatible interface)
 llm:
