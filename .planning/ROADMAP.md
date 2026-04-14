@@ -29,12 +29,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Re-running the pipeline does not re-push papers already seen in previous runs
   4. If arXiv search or Claude API calls fail, the pipeline logs a clear error message and exits gracefully without a confusing partial notification
   5. User can enable or disable search sources and adjust relevance score thresholds via the YAML config file
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md -- Config layer, data models, state management, example config
+- [ ] 01-02-PLAN.md -- ArXiv search adapter, deduplication, PDF fetch and text extraction
+- [ ] 01-03-PLAN.md -- AI analysis pipeline (two-stage scoring + deep analysis + keyword extraction)
+- [ ] 01-04-PLAN.md -- Feishu notification with tiered rich message cards
+- [ ] 01-05-PLAN.md -- Pipeline orchestrator and GitHub Actions workflow
 
 ### Phase 2: Multi-Source Search and PDF Fetching
 **Goal**: Researchers get broad academic coverage from all five sources with full-text PDF support for AI analysis
@@ -92,7 +94,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. End-to-End Pipeline Proof | 0/? | Not started | - |
+| 1. End-to-End Pipeline Proof | 0/5 | Planning complete | - |
 | 2. Multi-Source Search and PDF Fetching | 0/? | Not started | - |
 | 3. Advanced AI Analysis | 0/? | Not started | - |
 | 4. Zotero and Obsidian Integrations | 0/? | Not started | - |
