@@ -16,9 +16,9 @@
 ### Literature Search
 
 - [x] **SRCH-01**: System searches arXiv for papers matching configured queries with date filtering
-- [ ] **SRCH-02**: System searches PubMed via E-utilities for papers matching configured queries
-- [ ] **SRCH-03**: System searches OpenAlex for papers matching configured queries
-- [ ] **SRCH-04**: System searches Semantic Scholar for papers matching configured queries
+- [x] **SRCH-02**: System searches PubMed via E-utilities for papers matching configured queries
+- [x] **SRCH-03**: System searches OpenAlex for papers matching configured queries
+- [x] **SRCH-04**: System searches Semantic Scholar for papers matching configured queries
 - [x] **SRCH-05**: System resolves DOIs to paper metadata via content negotiation
 - [x] **SRCH-06**: System deduplicates results across all sources by DOI and normalized title hash
 - [x] **SRCH-07**: System tracks seen papers in persistent state file to avoid re-pushing across daily runs
@@ -107,9 +107,9 @@
 | CONF-04 | Phase 1 | Complete |
 | CONF-05 | Phase 1 | Complete |
 | SRCH-01 | Phase 1 | Complete |
-| SRCH-02 | Phase 2 | Pending |
-| SRCH-03 | Phase 2 | Pending |
-| SRCH-04 | Phase 2 | Pending |
+| SRCH-02 | Phase 2 | Complete |
+| SRCH-03 | Phase 2 | Complete |
+| SRCH-04 | Phase 2 | Complete |
 | SRCH-05 | Phase 2 | Complete |
 | SRCH-06 | Phase 1 | Complete |
 | SRCH-07 | Phase 1 | Complete |

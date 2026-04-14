@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-04-14T12:36:21.290Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-04-14T12:38:48.703Z"
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -52,6 +52,7 @@ Plan: 2 of 3
 | Phase 01 P04 | 5min | 2 tasks | 4 files |
 | Phase 01 P05 | 5min | 2 tasks | 2 files |
 | Phase 02 P02 | 4min | 2 tasks | 3 files |
+| Phase 02 P01 | 6 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,9 @@ Recent decisions affecting current work:
 - [Phase 02]: DOI enrichment is additive-only: fills missing fields, never overwrites existing data
 - [Phase 02]: Unpaywall channel silently skipped when UNPAYWALL_EMAIL env var not set
 - [Phase 02]: All download validation delegated to existing fetch_pdf (no duplication)
+- [Phase 02]: New search sources default to enabled=False for backward compatibility
+- [Phase 02]: tenacity retry only on 5xx server errors, not 4xx client errors
+- [Phase 02]: S2 uses 3 retry attempts vs 2 for other sources due to flakier API
 
 ### Pending Todos
 
@@ -92,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-14T12:36:21.288Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-04-14T12:38:48.701Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
