@@ -32,6 +32,8 @@ from src.fetch.multi_channel_fetcher import fetch_pdf_multi_channel
 from src.analysis.keyword_extractor import extract_keywords
 from src.analysis.analyzer import PaperAnalyzer
 from src.delivery.feishu import FeishuNotifier
+from src.integrations.zotero import ZoteroArchiver
+from src.integrations.obsidian import ObsidianWriter
 
 logging.basicConfig(
     level=logging.INFO,
@@ -84,7 +86,7 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
     }
 
     # 1. Load and validate config
-    logger.info("Step 1/10: Loading configuration...")
+    logger.info("Step 1/12: Loading configuration...")
     try:
         config = load_config(config_path)
     except (FileNotFoundError, ValueError) as e:
@@ -95,14 +97,14 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
     logger.info(f"  Loaded {len(config.research_topics)} research topics")
 
     # 2. Initialize state manager
-    logger.info("Step 2/10: Initializing state manager...")
+    logger.info("Step 2/12: Initializing state manager...")
     state = StateManager(state_dir=config.state_dir)
     logger.info(f"  Seen papers: {state.seen_count}")
 
     # 3. Extract keywords for each topic and search ALL enabled sources
     # CRITICAL: Track which topic produced each paper so analysis only scores
     # papers against the topic that found them (not all topics).
-    logger.info("Step 3/10: Searching all enabled sources...")
+    logger.info("Step 3/12: Searching all enabled sources...")
     papers_by_topic: dict[str, list[Paper]] = defaultdict(list)
 
     from openai import OpenAI
@@ -175,7 +177,7 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
         return stats
 
     # 4. Deduplicate and filter seen papers (SRCH-07)
-    logger.info(f"Step 4/10: Deduplicating {len(all_papers)} papers...")
+    logger.info(f"Step 4/12: Deduplicating {len(all_papers)} papers...")
     all_papers = deduplicate_papers(all_papers)
     all_papers = state.filter_new(all_papers)
     logger.info(f"  After dedup + seen filter: {len(all_papers)} new papers")
@@ -215,7 +217,7 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
     # 5. AI Scoring (abstract-only, no PDF needed)
     # Score ALL papers using abstracts to determine relevance tiers.
     # This avoids downloading PDFs for papers that will be filtered out.
-    logger.info("Step 5/10: Scoring papers (abstracts only)...")
+    logger.info("Step 5/12: Scoring papers (abstracts only)...")
     all_analyzed: list[AnalyzedPaper] = []
 
     for topic in config.research_topics:
@@ -242,7 +244,7 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
     # 6. Fetch PDFs only for HIGH-relevance papers (multi-channel)
     high_analyzed = [ap for ap in all_analyzed if ap.analysis.tier == RelevanceTier.HIGH]
     if high_analyzed:
-        logger.info(f"Step 6/10: Fetching PDFs for {len(high_analyzed)} high-relevance papers (multi-channel)...")
+        logger.info(f"Step 6/12: Fetching PDFs for {len(high_analyzed)} high-relevance papers (multi-channel)...")
         async with httpx.AsyncClient() as client:
             sem = asyncio.Semaphore(5)
 
@@ -255,11 +257,11 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
         full_text_count = sum(1 for ap in high_analyzed if ap.paper.text_source == "full_text")
         logger.info(f"  {full_text_count}/{len(high_analyzed)} papers with full text (multi-channel)")
     else:
-        logger.info("Step 6/10: No high-relevance papers, skipping PDF download")
+        logger.info("Step 6/12: No high-relevance papers, skipping PDF download")
 
     # 7. Deep analysis for HIGH-relevance papers (with full text) — Stage 2a
     if high_analyzed:
-        logger.info(f"Step 7/10: Deep-analyzing {len(high_analyzed)} high-relevance papers...")
+        logger.info(f"Step 7/12: Deep-analyzing {len(high_analyzed)} high-relevance papers...")
         for topic in config.research_topics:
             topic_high = [ap for ap in high_analyzed if ap.topic_name == topic.name]
             if not topic_high:
@@ -277,11 +279,11 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
             except Exception as e:
                 logger.error(f"Deep analysis failed for topic '{topic.name}': {e}")
     else:
-        logger.info("Step 7/10: No papers to deep-analyze")
+        logger.info("Step 7/12: No papers to deep-analyze")
 
     # 8. Stage 2b: Methodology deep analysis for HIGH-relevance papers
     if high_analyzed:
-        logger.info(f"Step 8/10: Methodology deep analysis for {len(high_analyzed)} high-relevance papers...")
+        logger.info(f"Step 8/12: Methodology deep analysis for {len(high_analyzed)} high-relevance papers...")
         for topic in config.research_topics:
             topic_high = [ap for ap in high_analyzed if ap.topic_name == topic.name]
             if not topic_high:
@@ -297,12 +299,12 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
             except Exception as e:
                 logger.error(f"Methodology analysis failed for topic '{topic.name}': {e}")
     else:
-        logger.info("Step 8/10: No high-relevance papers, skipping methodology analysis")
+        logger.info("Step 8/12: No high-relevance papers, skipping methodology analysis")
 
     # 9. Stage 3: Comparative analysis for top-scoring papers (9-10 only)
     top_papers = [ap for ap in high_analyzed if ap.analysis.relevance_score >= 9]
     if top_papers:
-        logger.info(f"Step 9/10: Comparative analysis for {len(top_papers)} top-scoring papers (score >= 9)...")
+        logger.info(f"Step 9/12: Comparative analysis for {len(top_papers)} top-scoring papers (score >= 9)...")
         for topic in config.research_topics:
             topic_top = [ap for ap in top_papers if ap.topic_name == topic.name]
             if not topic_top:
@@ -326,7 +328,7 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
             except Exception as e:
                 logger.error(f"Comparative analysis failed for topic '{topic.name}': {e}")
     else:
-        logger.info("Step 9/10: No papers scoring 9+, skipping comparative analysis")
+        logger.info("Step 9/12: No papers scoring 9+, skipping comparative analysis")
 
     # Save HIGH papers to history for future comparative analysis
     if high_analyzed:
@@ -338,7 +340,7 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
         logger.info(f"Saved {len(high_analyzed)} papers to analysis history")
 
     # 10. Send notification and save state
-    logger.info("Step 10/10: Sending notification and saving state...")
+    logger.info("Step 10/12: Sending notification and saving state...")
     topic_stats = {}
     for ap in all_analyzed:
         if ap.topic_name not in topic_stats:
@@ -379,6 +381,46 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
             await notifier.send([], topic_stats)
         except Exception:
             pass
+
+    # 11. Zotero archiving (optional, independent fault tolerance)
+    if config.zotero and config.zotero.enabled:
+        logger.info("Step 11: Archiving HIGH-relevance papers to Zotero...")
+        try:
+            zotero_archiver = ZoteroArchiver(config.zotero)
+            zotero_result = await zotero_archiver.archive_papers(high_analyzed)
+            logger.info(
+                f"  Zotero: {zotero_result.get('archived', 0)} archived, "
+                f"{zotero_result.get('skipped_existing', 0)} duplicates skipped, "
+                f"{len(zotero_result.get('errors', []))} errors"
+            )
+            if zotero_result.get('errors'):
+                for err in zotero_result['errors']:
+                    logger.warning(f"  Zotero error: {err}")
+        except Exception as e:
+            logger.error(f"  Zotero archiving failed: {e}")
+            stats["errors"].append(f"Zotero error: {e}")
+    else:
+        logger.info("Step 11: Zotero integration not configured, skipping")
+
+    # 12. Obsidian vault generation (optional, independent fault tolerance)
+    if config.obsidian and config.obsidian.enabled:
+        logger.info("Step 12: Generating Obsidian vault notes and pushing...")
+        try:
+            obsidian_writer = ObsidianWriter(config.obsidian)
+            obsidian_result = await obsidian_writer.write_and_push(all_analyzed, topic_stats)
+            logger.info(
+                f"  Obsidian: {obsidian_result.get('cards_written', 0)} cards, "
+                f"daily={obsidian_result.get('daily_written', False)}, "
+                f"pushed={obsidian_result.get('pushed', False)}"
+            )
+            if obsidian_result.get('errors'):
+                for err in obsidian_result['errors']:
+                    logger.warning(f"  Obsidian error: {err}")
+        except Exception as e:
+            logger.error(f"  Obsidian generation failed: {e}")
+            stats["errors"].append(f"Obsidian error: {e}")
+    else:
+        logger.info("Step 12: Obsidian integration not configured, skipping")
 
     elapsed = time.time() - start_time
     logger.info(f"Pipeline complete in {elapsed:.1f}s: {stats['total_papers']} papers, {len(stats['errors'])} errors")
