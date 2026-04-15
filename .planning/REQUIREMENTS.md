@@ -36,8 +36,8 @@
 
 - [x] **ANLY-01**: System scores each paper's relevance (1-10) to user's configured research interests via Claude API
 - [x] **ANLY-02**: System generates concise summaries (2-3 paragraphs) for medium-and-above relevance papers via Claude API
-- [ ] **ANLY-03**: System produces deep analysis (methodology, limitations, future directions) for high-relevance papers via Claude API
-- [ ] **ANLY-04**: System produces comparative analysis with related work for high-relevance papers via Claude API
+- [x] **ANLY-03**: System produces deep analysis (methodology, limitations, future directions) for high-relevance papers via Claude API
+- [x] **ANLY-04**: System produces comparative analysis with related work for high-relevance papers via Claude API
 - [x] **ANLY-05**: System delivers tiered output: high-relevance → full analysis, medium → score + summary, low → title + link only
 
 ### Notification
@@ -121,8 +121,8 @@
 | FETH-05 | Phase 1 | Complete |
 | ANLY-01 | Phase 1 | Complete |
 | ANLY-02 | Phase 1 | Complete |
-| ANLY-03 | Phase 3 | Pending |
-| ANLY-04 | Phase 3 | Pending |
+| ANLY-03 | Phase 3 | Complete |
+| ANLY-04 | Phase 3 | Complete |
 | ANLY-05 | Phase 1 | Complete |
 | NTFY-01 | Phase 1 | Complete |
 | NTFY-02 | Phase 1 | Complete |
