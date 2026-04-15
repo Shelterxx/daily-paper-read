@@ -66,3 +66,19 @@ search_timeframe_hours: 24
 
 # State directory for tracking seen papers (relative to repo root)
 state_dir: "state"
+
+# Zotero integration (optional) -- auto-archive HIGH-relevance papers
+# Enable by adding Zotero API credentials as GitHub Secrets.
+# Set both ZOTERO_USER_ID and ZOTERO_API_KEY to activate.
+zotero:
+  enabled: false
+  user_id_env: "ZOTERO_USER_ID"    # Find at zotero.org/settings -> Your user ID
+  api_key_env: "ZOTERO_API_KEY"     # Create at zotero.org/settings/keys -> New Private Key
+  collection_root: "DailyPapers"     # Root collection name in your Zotero library
+
+# Obsidian vault integration (optional) -- push daily summaries and paper cards to a Git repo
+# Enable by setting vault_repo_url and OBSIDIAN_VAULT_PAT.
+obsidian:
+  enabled: false
+  vault_repo_url: ""                # e.g. "https://github.com/yourname/literature-vault.git"
+  vault_pat_env: "OBSIDIAN_VAULT_PAT"  # GitHub PAT with repo write access

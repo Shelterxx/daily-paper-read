@@ -48,4 +48,25 @@ def load_config(config_path: str = "config.yaml") -> AppConfig:
             f"Create a Feishu bot and add its webhook URL as a GitHub Secret."
         )
 
+    # Validate Zotero credentials (optional -- only when zotero block exists and enabled)
+    if config.zotero and config.zotero.enabled:
+        zotero_user_id = os.environ.get(config.zotero.user_id_env)
+        zotero_api_key = os.environ.get(config.zotero.api_key_env)
+        if not zotero_user_id or not zotero_api_key:
+            raise ValueError(
+                f"Zotero enabled but missing credentials: set {config.zotero.user_id_env} and {config.zotero.api_key_env}"
+            )
+
+    # Validate Obsidian credentials (optional -- only when obsidian block exists and enabled)
+    if config.obsidian and config.obsidian.enabled:
+        if not config.obsidian.vault_repo_url:
+            raise ValueError(
+                "Obsidian enabled but vault_repo_url is empty. Set obsidian.vault_repo_url in config."
+            )
+        obsidian_pat = os.environ.get(config.obsidian.vault_pat_env)
+        if not obsidian_pat:
+            raise ValueError(
+                f"Obsidian enabled but missing credentials: set {config.obsidian.vault_pat_env}"
+            )
+
     return config
