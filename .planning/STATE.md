@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-04-15T09:14:56.331Z"
+status: phase-complete
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-04-15T11:03:14Z"
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -23,16 +23,16 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 04 (Zotero and Obsidian Integrations) — EXECUTING
-Plan: 2 of 3
+Phase: 04 (Zotero and Obsidian Integrations) — COMPLETE
+Plan: 3 of 3 (04-03 complete)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 10
+- Total plans completed: 13
 - Average duration: 7min
-- Total execution time: 0.85 hours
+- Total execution time: 1.13 hours
 
 **By Phase:**
 
@@ -41,6 +41,7 @@ Plan: 2 of 3
 | 01-end-to-end-pipeline-proof | 5 | 35min | 7min |
 | 02-multi-source-search | 3 | 17min | 6min |
 | 03-advanced-ai-analysis | 2 | 11min | 6min |
+| 04-zotero-and-obsidian-integrations | 3 | 17min | 6min |
 
 **Recent Trend:**
 
@@ -60,6 +61,7 @@ Plan: 2 of 3
 | Phase 03 P02 | 5min | 2 tasks | 2 files |
 | Phase 04 P02 | 4min | 1 tasks | 2 files |
 | Phase 04 P01 | 6min | 2 tasks | 4 files |
+| Phase 04 P03 | 7min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -105,6 +107,9 @@ Recent decisions affecting current work:
 - [Phase 04]: Lazy pyzotero client init via property to defer credential validation until first use
 - [Phase 04]: PDF attached as linked_url since pipeline runs in CI without local PDF files
 - [Phase 04]: Tags added via fetch-item-then-update rather than create_tags for pyzotero version robustness
+- [Phase 04]: Both integrations run after state.mark_seen_batch so state saved even if Zotero/Obsidian fail
+- [Phase 04]: Neither integration failure causes pipeline exit code 1; errors logged only
+- [Phase 04]: Steps 11/12 omit /12 suffix to distinguish optional from mandatory steps
 
 ### Pending Todos
 
@@ -116,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-15T09:14:56.328Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-04-15T11:03:14Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None
