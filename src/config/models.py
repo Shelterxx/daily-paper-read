@@ -92,6 +92,38 @@ class ResearchTopic(BaseModel):
     relevance_thresholds: RelevanceThresholds = Field(default_factory=RelevanceThresholds)
 
 
+class ZoteroConfig(BaseModel):
+    """Zotero integration settings."""
+
+    enabled: bool = Field(default=False, description="Enable Zotero archiving")
+    user_id_env: str = Field(
+        default="ZOTERO_USER_ID",
+        description="Env var name for Zotero user ID",
+    )
+    api_key_env: str = Field(
+        default="ZOTERO_API_KEY",
+        description="Env var name for Zotero API key",
+    )
+    collection_root: str = Field(
+        default="DailyPapers",
+        description="Root collection name for archived papers",
+    )
+
+
+class ObsidianConfig(BaseModel):
+    """Obsidian vault integration settings."""
+
+    enabled: bool = Field(default=False, description="Enable Obsidian vault generation")
+    vault_repo_url: str = Field(
+        default="",
+        description="Git HTTPS URL for Obsidian vault repository",
+    )
+    vault_pat_env: str = Field(
+        default="OBSIDIAN_VAULT_PAT",
+        description="Env var name for GitHub PAT with repo access",
+    )
+
+
 class AppConfig(BaseModel):
     """Root application configuration."""
 
@@ -114,4 +146,12 @@ class AppConfig(BaseModel):
     state_dir: str = Field(
         default="state",
         description="Directory for persistent state files",
+    )
+    zotero: Optional[ZoteroConfig] = Field(
+        default=None,
+        description="Zotero integration settings (optional)",
+    )
+    obsidian: Optional[ObsidianConfig] = Field(
+        default=None,
+        description="Obsidian vault integration settings (optional)",
     )
