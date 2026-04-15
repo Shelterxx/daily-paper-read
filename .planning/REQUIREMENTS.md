@@ -48,11 +48,11 @@
 
 ### Zotero Integration
 
-- [ ] **ZTR-01**: System can auto-create Zotero items with paper metadata (title, authors, DOI, abstract, date)
-- [ ] **ZTR-02**: System adds AI-generated tags to Zotero items based on analysis results
-- [ ] **ZTR-03**: System attaches AI summary as a note to each Zotero item
-- [ ] **ZTR-04**: System attaches downloaded PDFs to corresponding Zotero items
-- [ ] **ZTR-05**: System checks for existing items before creating to avoid duplicates
+- [x] **ZTR-01**: System can auto-create Zotero items with paper metadata (title, authors, DOI, abstract, date)
+- [x] **ZTR-02**: System adds AI-generated tags to Zotero items based on analysis results
+- [x] **ZTR-03**: System attaches AI summary as a note to each Zotero item
+- [x] **ZTR-04**: System attaches downloaded PDFs to corresponding Zotero items
+- [x] **ZTR-05**: System checks for existing items before creating to avoid duplicates
 - [x] **ZTR-06**: Zotero integration is fully optional — system works without Zotero credentials
 
 ### Obsidian Integration
@@ -127,11 +127,11 @@
 | NTFY-01 | Phase 1 | Complete |
 | NTFY-02 | Phase 1 | Complete |
 | NTFY-03 | Phase 1 | Complete |
-| ZTR-01 | Phase 4 | Pending |
-| ZTR-02 | Phase 4 | Pending |
-| ZTR-03 | Phase 4 | Pending |
-| ZTR-04 | Phase 4 | Pending |
-| ZTR-05 | Phase 4 | Pending |
+| ZTR-01 | Phase 4 | Complete |
+| ZTR-02 | Phase 4 | Complete |
+| ZTR-03 | Phase 4 | Complete |
+| ZTR-04 | Phase 4 | Complete |
+| ZTR-05 | Phase 4 | Complete |
 | ZTR-06 | Phase 1 | Complete |
 | OBS-01 | Phase 4 | Complete |
 | OBS-02 | Phase 4 | Complete |

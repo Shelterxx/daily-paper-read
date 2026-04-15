@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-04-15T09:13:46.052Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-04-15T09:14:56.331Z"
 progress:
   total_phases: 4
   completed_phases: 3
@@ -59,6 +59,7 @@ Plan: 2 of 3
 | Phase 03 P01 | 6min | 2 tasks | 4 files |
 | Phase 03 P02 | 5min | 2 tasks | 2 files |
 | Phase 04 P02 | 4min | 1 tasks | 2 files |
+| Phase 04 P01 | 6min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,9 @@ Recent decisions affecting current work:
 - [Phase 03]: History saved before notification so current run papers available for next run comparisons
 - [Phase 04]: Lazy import in __init__.py includes both ObsidianWriter and ZoteroArchiver to support parallel plan execution
 - [Phase 04]: ObsidianWriter filename sanitization uses DOI with slash-to-dash, fallback to dedup_key, removes invalid chars
+- [Phase 04]: Lazy pyzotero client init via property to defer credential validation until first use
+- [Phase 04]: PDF attached as linked_url since pipeline runs in CI without local PDF files
+- [Phase 04]: Tags added via fetch-item-then-update rather than create_tags for pyzotero version robustness
 
 ### Pending Todos
 
@@ -112,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-15T09:13:46.049Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-04-15T09:14:56.328Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None
