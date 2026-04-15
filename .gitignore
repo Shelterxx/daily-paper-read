@@ -29,3 +29,8 @@ Thumbs.db
 # Virtual environments
 venv/
 .venv/
+
+# Reference code (not part of the project)
+paperRead/
+literature-search/
+sciencedirect-live-session-fetcher/
