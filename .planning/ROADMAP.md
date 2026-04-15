@@ -64,11 +64,11 @@ Plans:
   2. High-relevance papers include a comparative analysis section positioning the work relative to related papers found in the same run or recent runs
   3. The Feishu notification for high-relevance papers is clearly distinct from medium/low tier papers, showing the additional analysis depth
   4. Claude API costs remain bounded -- only papers above the high-relevance threshold consume tokens for deep and comparative analysis
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md -- Extend AnalysisResult model, create Stage 2b/3 prompts, add deep_analyze_methodology() and compare_with_history() to PaperAnalyzer, extend StateManager with history
+- [ ] 03-02-PLAN.md -- Enhance Feishu HIGH-tier display with 4 new analysis sections, integrate Stage 2b/3 and history into main.py pipeline
 
 ### Phase 4: Zotero and Obsidian Integrations
 **Goal**: Researchers can archive papers to Zotero with one click and accumulate a searchable knowledge base in Obsidian over time
@@ -96,5 +96,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. End-to-End Pipeline Proof | 0/5 | Planning complete | - |
 | 2. Multi-Source Search and PDF Fetching | 0/3 | Planning complete | - |
-| 3. Advanced AI Analysis | 0/? | Not started | - |
+| 3. Advanced AI Analysis | 0/2 | Planning complete | - |
 | 4. Zotero and Obsidian Integrations | 0/? | Not started | - |
