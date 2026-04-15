@@ -147,7 +147,7 @@ class OpenAlexSource(SearchSource):
             "search": keyword,
             "per_page": min(query.max_results, 50),
             "sort": "publication_date:desc",
-            "filter": f"publication_date:{cutoff_str}-{today_str},type:article|review",
+            "filter": f"from_publication_date:{cutoff_str},to_publication_date:{today_str},type:article|review",
         }
 
         # Polite pool: add mailto parameter for faster rate limits

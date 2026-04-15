@@ -91,7 +91,9 @@ class SciSearchSource(SearchSource):
             return_exceptions=True,
         )
 
-        cutoff_date = datetime.now(timezone.utc) - timedelta(hours=query.timeframe_hours)
+        # Note: sci_search is a semantic search engine that returns globally most-relevant
+        # papers, not time-sorted. Time filtering is skipped — the pipeline's dedup and
+        # seen-paper tracking handles freshness instead.
 
         for result in results:
             if isinstance(result, Exception):
@@ -99,11 +101,6 @@ class SciSearchSource(SearchSource):
                 continue
             for paper in result:
                 if paper.paper_id not in seen_ids:
-                    # Filter by timeframe
-                    if paper.published_date and paper.published_date.tzinfo is None:
-                        paper.published_date = paper.published_date.replace(tzinfo=timezone.utc)
-                    if paper.published_date and paper.published_date < cutoff_date:
-                        continue
                     seen_ids.add(paper.paper_id)
                     all_papers.append(paper)
 
@@ -173,6 +170,11 @@ class SciSearchSource(SearchSource):
     def _convert_item(self, item: dict) -> Optional[Paper]:
         """Convert a sci_search API result item to our Paper model.
 
+        sci_search returns semantic search results with two formats:
+        1. Structured: {title, abstract, doi, authors, ...} — standard paper metadata
+        2. Fragment: {content: "...", source: "[Title, JOURNAL. Authors. Year.](DOI_URL)"}
+           — PDF text snippet with citation info in source field
+
         Args:
             item: Raw dict from sci_search API response.
 
@@ -180,78 +182,159 @@ class SciSearchSource(SearchSource):
             Paper object, or None if essential fields are missing.
         """
         try:
+            # Try structured format first (has 'title' field)
             title = (item.get("title") or "").strip()
-            if not title:
-                return None
+            if title:
+                return self._convert_structured(item)
 
-            # paper_id: DOI > S2 paperId > hash of title
-            doi = item.get("doi") or item.get("externalIds", {}).get("DOI")
-            paper_id: str
-            if doi:
-                paper_id = doi.strip()
-            elif item.get("paperId"):
-                paper_id = item["paperId"]
-            else:
-                paper_id = hashlib.sha256(title.lower().encode()).hexdigest()[:16]
+            # Fragment format: parse citation from 'source' field
+            source_str = item.get("source") or ""
+            if source_str:
+                return self._convert_fragment(item, source_str)
 
-            # Authors: may be list of strings or list of dicts with "name" key
-            raw_authors = item.get("authors", [])
-            authors: list[str] = []
-            if isinstance(raw_authors, list):
-                for a in raw_authors:
-                    if isinstance(a, str):
-                        authors.append(a)
-                    elif isinstance(a, dict) and "name" in a:
-                        authors.append(a["name"])
-
-            # PDF URL from openAccessPdf if present
-            pdf_url = None
-            oa_pdf = item.get("openAccessPdf")
-            if isinstance(oa_pdf, dict) and oa_pdf.get("url"):
-                pdf_url = oa_pdf["url"]
-
-            # Published date
-            published_date = self._parse_date(item)
-
-            # DOI cleanup
-            clean_doi = None
-            if doi:
-                clean_doi = doi.replace("https://doi.org/", "").strip()
-
-            return Paper(
-                paper_id=paper_id,
-                title=title,
-                abstract=item.get("abstract"),
-                authors=authors,
-                doi=clean_doi,
-                source="sci_search",
-                source_url=item.get("url"),
-                pdf_url=pdf_url,
-                published_date=published_date,
-            )
+            return None
         except Exception as e:
             logger.warning(f"Failed to parse sci_search item: {e}")
             return None
 
-    def _parse_date(self, item: dict) -> Optional[datetime]:
-        """Parse publication date from sci_search item.
+    def _convert_structured(self, item: dict) -> Optional[Paper]:
+        """Convert a structured sci_search result with standard paper fields."""
+        title = (item.get("title") or "").strip()
+        if not title:
+            return None
 
-        Tries publicationDate first, then year field.
+        # paper_id: DOI > S2 paperId > hash of title
+        doi = item.get("doi") or item.get("externalIds", {}).get("DOI")
+        paper_id: str
+        if doi:
+            paper_id = doi.strip()
+        elif item.get("paperId"):
+            paper_id = item["paperId"]
+        else:
+            paper_id = hashlib.sha256(title.lower().encode()).hexdigest()[:16]
+
+        # Authors: may be list of strings or list of dicts with "name" key
+        raw_authors = item.get("authors", [])
+        authors: list[str] = []
+        if isinstance(raw_authors, list):
+            for a in raw_authors:
+                if isinstance(a, str):
+                    authors.append(a)
+                elif isinstance(a, dict) and "name" in a:
+                    authors.append(a["name"])
+
+        # PDF URL from openAccessPdf if present
+        pdf_url = None
+        oa_pdf = item.get("openAccessPdf")
+        if isinstance(oa_pdf, dict) and oa_pdf.get("url"):
+            pdf_url = oa_pdf["url"]
+
+        # Published date
+        published_date = self._parse_date(item)
+
+        # DOI cleanup
+        clean_doi = None
+        if doi:
+            clean_doi = doi.replace("https://doi.org/", "").strip()
+
+        return Paper(
+            paper_id=paper_id,
+            title=title,
+            abstract=item.get("abstract"),
+            authors=authors,
+            doi=clean_doi,
+            source="sci_search",
+            source_url=item.get("url"),
+            pdf_url=pdf_url,
+            published_date=published_date,
+        )
+
+    def _convert_fragment(self, item: dict, source_str: str) -> Optional[Paper]:
+        """Convert a fragment result by parsing citation info from source string.
+
+        Source format: [Title, JOURNAL. Authors. Year.](DOI_URL)
+        or: [Title, JOURNAL. Authors. Year.] (no DOI URL)
         """
-        pub_date_str = item.get("publicationDate")
-        if pub_date_str:
+        import re
+
+        # Extract DOI URL from markdown link syntax: ](url)
+        doi_url = None
+        doi_match = re.search(r'\]\((https?://doi\.org/[^\s\)]+)\)', source_str)
+        if doi_match:
+            doi_url = doi_match.group(1)
+
+        # Extract text inside brackets: [Title, JOURNAL. Authors. Year.]
+        bracket_match = re.match(r'\[(.+?)\](?:\(.+?\))?', source_str)
+        if not bracket_match:
+            return None
+
+        citation = bracket_match.group(1).strip()
+
+        # Split citation by comma: "Title, JOURNAL. Authors. Year."
+        # The first comma separates title from the rest
+        parts = citation.split(",", 1)
+        title = parts[0].strip()
+        if not title:
+            return None
+
+        # Parse journal, authors, year from the remainder
+        remainder = parts[1].strip() if len(parts) > 1 else ""
+        authors: list[str] = []
+        year: Optional[int] = None
+
+        if remainder:
+            # Extract year: look for 4-digit year pattern
+            year_match = re.search(r'\b((?:19|20)\d{2})\b', remainder)
+            if year_match:
+                year = int(year_match.group(1))
+
+            # Extract authors: text between journal (first sentence ending in .) and year
+            # Format: "JOURNAL. Author1, Author2, Author3. Year."
+            # Split by '.' — journal is first segment, authors in remaining
+            dot_parts = remainder.split(".")
+            if len(dot_parts) >= 2:
+                # Authors are typically in the segment(s) after the journal name
+                author_text = ".".join(dot_parts[1:]).strip()
+                # Clean trailing period from year
+                author_text = re.sub(r'\s*\d{4}\s*\.?\s*$', '', author_text).strip()
+                if author_text:
+                    # Split by comma, filter out short/non-name tokens
+                    raw_names = [n.strip() for n in author_text.split(",") if n.strip()]
+                    for name in raw_names:
+                        # Skip if it looks like a journal/venue name (all caps or very long)
+                        if len(name) > 40:
+                            continue
+                        authors.append(name)
+
+        # DOI cleanup
+        clean_doi = None
+        if doi_url:
+            clean_doi = doi_url.replace("https://doi.org/", "").strip()
+
+        # Paper ID: DOI > hash of title
+        if clean_doi:
+            paper_id = clean_doi
+        else:
+            paper_id = hashlib.sha256(title.lower().encode()).hexdigest()[:16]
+
+        # Use content as a partial abstract substitute
+        content = (item.get("content") or "").strip()
+
+        published_date = None
+        if year:
             try:
-                return datetime.strptime(str(pub_date_str)[:10], "%Y-%m-%d").replace(
-                    tzinfo=timezone.utc
-                )
+                published_date = datetime(year, 1, 1, tzinfo=timezone.utc)
             except ValueError:
                 pass
 
-        year = item.get("year")
-        if year:
-            try:
-                return datetime(int(year), 1, 1, tzinfo=timezone.utc)
-            except (ValueError, TypeError):
-                pass
-
-        return None
+        return Paper(
+            paper_id=paper_id,
+            title=title,
+            abstract=content[:500] if content else None,
+            authors=authors,
+            doi=clean_doi,
+            source="sci_search",
+            source_url=doi_url,
+            pdf_url=None,
+            published_date=published_date,
+        )

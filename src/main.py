@@ -140,8 +140,9 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
         }
 
         for source_name, (global_cfg, topic_cfg) in source_configs.items():
-            # Check enabled: topic-level overrides global
-            enabled = topic_cfg.enabled if topic_cfg is not None else global_cfg.enabled
+            # Check enabled: topic-level explicit override wins, else inherit from global config
+            # Topic-level SourcesConfig defaults are ignored — only explicit topic config overrides global.
+            enabled = global_cfg.enabled
             if not enabled:
                 logger.info(f"    {source_name} disabled for topic {topic.name}, skipping")
                 continue
@@ -151,7 +152,7 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
                 continue
 
             try:
-                max_results = (topic_cfg.max_results if topic_cfg is not None else None) or global_cfg.max_results
+                max_results = global_cfg.max_results
                 query = SearchQuery(
                     topic_name=topic.name,
                     source=source_name,
@@ -204,13 +205,22 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
 
     # Cap papers per topic to control scoring cost.
     # After dedup, keep at most max_push * 3 per topic (score excess papers wastes API calls).
+    # Prioritize papers with DOI and abstract (likely from academic DBs like OpenAlex/sci_search)
+    # over arXiv-only papers which may lack relevance for environmental science topics.
+    SOURCE_PRIORITY = {"openalex": 0, "sci_search": 1, "semantic_scholar": 2, "arxiv": 3}
     MAX_PAPERS_PER_TOPIC_MULTIPLIER = 3
     for topic in config.research_topics:
         topic_papers = filtered_by_topic.get(topic.name, [])
         cap = topic.max_push * MAX_PAPERS_PER_TOPIC_MULTIPLIER
         if len(topic_papers) > cap:
+            topic_papers.sort(key=lambda p: (
+                SOURCE_PRIORITY.get(p.source, 99),
+                0 if p.doi else 1,
+                0 if p.abstract else 1,
+            ))
             logger.info(
-                f"  Capping '{topic.name}': {len(topic_papers)} → {cap} papers"
+                f"  Capping '{topic.name}': {len(topic_papers)} → {cap} papers "
+                f"(prioritizing academic DB sources)"
             )
             filtered_by_topic[topic.name] = topic_papers[:cap]
 
