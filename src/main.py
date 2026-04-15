@@ -84,7 +84,7 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
     }
 
     # 1. Load and validate config
-    logger.info("Step 1/8: Loading configuration...")
+    logger.info("Step 1/10: Loading configuration...")
     try:
         config = load_config(config_path)
     except (FileNotFoundError, ValueError) as e:
@@ -95,14 +95,14 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
     logger.info(f"  Loaded {len(config.research_topics)} research topics")
 
     # 2. Initialize state manager
-    logger.info("Step 2/8: Initializing state manager...")
+    logger.info("Step 2/10: Initializing state manager...")
     state = StateManager(state_dir=config.state_dir)
     logger.info(f"  Seen papers: {state.seen_count}")
 
     # 3. Extract keywords for each topic and search ALL enabled sources
     # CRITICAL: Track which topic produced each paper so analysis only scores
     # papers against the topic that found them (not all topics).
-    logger.info("Step 3/8: Searching all enabled sources...")
+    logger.info("Step 3/10: Searching all enabled sources...")
     papers_by_topic: dict[str, list[Paper]] = defaultdict(list)
 
     from openai import OpenAI
@@ -175,7 +175,7 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
         return stats
 
     # 4. Deduplicate and filter seen papers (SRCH-07)
-    logger.info(f"Step 4/8: Deduplicating {len(all_papers)} papers...")
+    logger.info(f"Step 4/10: Deduplicating {len(all_papers)} papers...")
     all_papers = deduplicate_papers(all_papers)
     all_papers = state.filter_new(all_papers)
     logger.info(f"  After dedup + seen filter: {len(all_papers)} new papers")
@@ -215,7 +215,7 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
     # 5. AI Scoring (abstract-only, no PDF needed)
     # Score ALL papers using abstracts to determine relevance tiers.
     # This avoids downloading PDFs for papers that will be filtered out.
-    logger.info("Step 5/8: Scoring papers (abstracts only)...")
+    logger.info("Step 5/10: Scoring papers (abstracts only)...")
     all_analyzed: list[AnalyzedPaper] = []
 
     for topic in config.research_topics:
@@ -242,7 +242,7 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
     # 6. Fetch PDFs only for HIGH-relevance papers (multi-channel)
     high_analyzed = [ap for ap in all_analyzed if ap.analysis.tier == RelevanceTier.HIGH]
     if high_analyzed:
-        logger.info(f"Step 6/8: Fetching PDFs for {len(high_analyzed)} high-relevance papers (multi-channel)...")
+        logger.info(f"Step 6/10: Fetching PDFs for {len(high_analyzed)} high-relevance papers (multi-channel)...")
         async with httpx.AsyncClient() as client:
             sem = asyncio.Semaphore(5)
 
@@ -255,11 +255,11 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
         full_text_count = sum(1 for ap in high_analyzed if ap.paper.text_source == "full_text")
         logger.info(f"  {full_text_count}/{len(high_analyzed)} papers with full text (multi-channel)")
     else:
-        logger.info("Step 6/8: No high-relevance papers, skipping PDF download")
+        logger.info("Step 6/10: No high-relevance papers, skipping PDF download")
 
-    # 7. Deep analysis for HIGH-relevance papers (with full text)
+    # 7. Deep analysis for HIGH-relevance papers (with full text) — Stage 2a
     if high_analyzed:
-        logger.info(f"Step 7/8: Deep-analyzing {len(high_analyzed)} high-relevance papers...")
+        logger.info(f"Step 7/10: Deep-analyzing {len(high_analyzed)} high-relevance papers...")
         for topic in config.research_topics:
             topic_high = [ap for ap in high_analyzed if ap.topic_name == topic.name]
             if not topic_high:
@@ -277,10 +277,68 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
             except Exception as e:
                 logger.error(f"Deep analysis failed for topic '{topic.name}': {e}")
     else:
-        logger.info("Step 7/8: No papers to deep-analyze")
+        logger.info("Step 7/10: No papers to deep-analyze")
 
-    # 8. Send notification and save state
-    logger.info("Step 8/8: Sending notification and saving state...")
+    # 8. Stage 2b: Methodology deep analysis for HIGH-relevance papers
+    if high_analyzed:
+        logger.info(f"Step 8/10: Methodology deep analysis for {len(high_analyzed)} high-relevance papers...")
+        for topic in config.research_topics:
+            topic_high = [ap for ap in high_analyzed if ap.topic_name == topic.name]
+            if not topic_high:
+                continue
+            try:
+                analyzer = PaperAnalyzer(
+                    llm_config=config.llm,
+                    thresholds=topic.relevance_thresholds,
+                    language=config.notification.language,
+                )
+                for ap in topic_high:
+                    ap.analysis = analyzer.deep_analyze_methodology(ap.paper, ap.analysis)
+            except Exception as e:
+                logger.error(f"Methodology analysis failed for topic '{topic.name}': {e}")
+    else:
+        logger.info("Step 8/10: No high-relevance papers, skipping methodology analysis")
+
+    # 9. Stage 3: Comparative analysis for top-scoring papers (9-10 only)
+    top_papers = [ap for ap in high_analyzed if ap.analysis.relevance_score >= 9]
+    if top_papers:
+        logger.info(f"Step 9/10: Comparative analysis for {len(top_papers)} top-scoring papers (score >= 9)...")
+        for topic in config.research_topics:
+            topic_top = [ap for ap in top_papers if ap.topic_name == topic.name]
+            if not topic_top:
+                continue
+            try:
+                analyzer = PaperAnalyzer(
+                    llm_config=config.llm,
+                    thresholds=topic.relevance_thresholds,
+                    language=config.notification.language,
+                )
+                for ap in topic_top:
+                    historical = state.get_history_for_comparison(
+                        topic_name=topic.name,
+                        keywords=ap.analysis.extracted_keywords,
+                        limit=5,
+                    )
+                    if historical:
+                        ap.analysis = analyzer.compare_with_history(ap.paper, ap.analysis, historical)
+                    else:
+                        logger.warning(f"No historical papers for comparison with '{ap.paper.title[:40]}'")
+            except Exception as e:
+                logger.error(f"Comparative analysis failed for topic '{topic.name}': {e}")
+    else:
+        logger.info("Step 9/10: No papers scoring 9+, skipping comparative analysis")
+
+    # Save HIGH papers to history for future comparative analysis
+    if high_analyzed:
+        for ap in high_analyzed:
+            try:
+                state.add_to_history(ap)
+            except Exception as e:
+                logger.warning(f"Failed to add paper to history: {e}")
+        logger.info(f"Saved {len(high_analyzed)} papers to analysis history")
+
+    # 10. Send notification and save state
+    logger.info("Step 10/10: Sending notification and saving state...")
     topic_stats = {}
     for ap in all_analyzed:
         if ap.topic_name not in topic_stats:
