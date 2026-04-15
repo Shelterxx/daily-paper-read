@@ -1,39 +1,34 @@
-"""Feishu webhook notifier with rich message cards and tiered display."""
+"""Feishu webhook notifier with interactive cards and tiered display."""
 
 import json
 import logging
-import os
-from typing import Optional
 from collections import defaultdict
+from typing import Optional
 
 import httpx
-import jinja2
 
 from src.delivery.base import Notifier
 from src.search.models import AnalyzedPaper, RelevanceTier
 
 logger = logging.getLogger(__name__)
 
-# Feishu webhook post content has ~30KB limit; use 28KB conservatively
+# Feishu card payload limit ~30KB; use 28KB conservatively
 MAX_CONTENT_BYTES = 28000
 
 
 class FeishuNotifier(Notifier):
-    """Feishu webhook notifier with rich message cards and tiered display."""
+    """Feishu webhook notifier using interactive card format.
+
+    Builds rich, visually-structured cards with colored headers,
+    markdown text, action buttons, and tiered paper display.
+    """
 
     def __init__(self, webhook_url: Optional[str] = None, language: str = "zh"):
         self.webhook_url = webhook_url
         self.language = language
-        self._env = jinja2.Environment(
-            loader=jinja2.FileSystemLoader("templates"),
-            autoescape=False,
-        )
 
     async def send(self, papers: list[AnalyzedPaper], topic_stats: dict) -> bool:
-        """Send tiered paper digest to Feishu.
-
-        Splits into multiple messages if content exceeds size limit.
-        """
+        """Send tiered paper digest to Feishu as interactive cards."""
         if not self.webhook_url:
             logger.warning("Feishu webhook URL not configured, skipping notification")
             return False
@@ -41,7 +36,6 @@ class FeishuNotifier(Notifier):
         if not papers:
             return await self._send_no_papers(topic_stats)
 
-        # Build message content grouped by topic
         messages = self._build_messages(papers, topic_stats)
         all_ok = True
 
@@ -54,179 +48,217 @@ class FeishuNotifier(Notifier):
 
         return all_ok
 
+    # ── Card builders ──────────────────────────────────────────────
+
     def _build_messages(
         self, papers: list[AnalyzedPaper], topic_stats: dict
     ) -> list[dict]:
-        """Build one or more Feishu post messages, splitting if needed."""
-        # Header with stats
-        header = self._build_stats_header(topic_stats)
+        """Build interactive cards — one card per topic, HIGH+MEDIUM only."""
+        # Filter: only push HIGH and MEDIUM papers
+        relevant = [ap for ap in papers if ap.analysis.tier in (RelevanceTier.HIGH, RelevanceTier.MEDIUM)]
 
-        # Group papers by topic
+        if not relevant:
+            return []
+
+        # Group by topic
         by_topic: dict[str, list[AnalyzedPaper]] = defaultdict(list)
-        for ap in papers:
+        for ap in relevant:
             by_topic[ap.topic_name].append(ap)
 
-        # Build content sections
-        all_sections = [header]
+        cards: list[dict] = []
         for topic_name, topic_papers in by_topic.items():
-            topic_header = self._make_text(
-                f"\n{'='*20} {topic_name} {'='*20}\n"
-            )
-            all_sections.append(topic_header)
+            topic_high = sum(1 for ap in topic_papers if ap.analysis.tier == RelevanceTier.HIGH)
+            topic_medium = len(topic_papers) - topic_high
 
-            # Sort: high first, then medium, then low
+            if self.language == "zh":
+                title = f"📚 {topic_name}（{topic_high} 高 + {topic_medium} 中）"
+            else:
+                title = f"📚 {topic_name} ({topic_high} high + {topic_medium} med)"
+
+            header = {
+                "title": {"tag": "plain_text", "content": title},
+                "template": "blue",
+            }
+
             sorted_papers = sorted(
                 topic_papers,
-                key=lambda p: (
-                    p.analysis.relevance_score,
-                    0 if p.analysis.tier == RelevanceTier.HIGH else 1,
-                ),
+                key=lambda p: (p.analysis.relevance_score, 0 if p.analysis.tier == RelevanceTier.HIGH else 1),
                 reverse=True,
             )
 
+            elements = []
             for ap in sorted_papers:
-                section = self._build_paper_section(ap)
-                all_sections.extend(section)
+                elements.extend(self._build_paper_elements(ap))
 
-        # Split into multiple messages if content is too large
-        return self._split_messages(all_sections, topic_stats)
+            # Split into multiple cards if this topic exceeds size limit
+            cards.extend(self._split_cards(header, elements))
 
-    def _build_stats_header(self, topic_stats: dict) -> dict:
-        """Build header section with summary statistics."""
-        total = sum(s.get("total", 0) for s in topic_stats.values())
-        high = sum(s.get("high", 0) for s in topic_stats.values())
-        medium = sum(s.get("medium", 0) for s in topic_stats.values())
-        low = sum(s.get("low", 0) for s in topic_stats.values())
+        return cards
 
-        if self.language == "en":
-            text = (
-                f"Today's Literature Digest\n"
-                f"Total new papers: {total} | "
-                f"High relevance: {high} | Medium: {medium} | Low: {low}\n"
-            )
-        else:
-            text = (
-                f"Daily Literature Digest\n"
-                f"Total new papers: {total} | "
-                f"High: {high} | Medium: {medium} | Low: {low}\n"
-            )
-
-        return self._make_text(text)
-
-    def _build_paper_section(self, ap: AnalyzedPaper) -> list[dict]:
-        """Build Feishu rich text section for one paper based on tier."""
-        sections: list[dict] = []
+    def _build_paper_elements(self, ap: AnalyzedPaper) -> list[dict]:
+        """Build card elements for one paper based on tier."""
+        elements: list[dict] = []
         tier = ap.analysis.tier
         score = ap.analysis.relevance_score
         paper = ap.paper
 
-        # Title with score badge
-        tier_emoji = (
-            ">>>"
-            if tier == RelevanceTier.HIGH
-            else (">>" if tier == RelevanceTier.MEDIUM else ">")
-        )
-        title_text = f"{tier_emoji} [{score}/10] {paper.title}\n"
-        sections.append(self._make_text(title_text))
+        # Escape lark_md special chars in title
+        title = paper.title.replace("[", "［").replace("]", "］")
+
+        # Tier icon
+        if tier == RelevanceTier.HIGH:
+            icon = "🔥"
+        elif tier == RelevanceTier.MEDIUM:
+            icon = "📄"
+        else:
+            icon = "📌"
+
+        # Title line
+        if paper.source_url:
+            title_md = f'{icon} **[{score}/10] [{title}]({paper.source_url})**'
+        else:
+            title_md = f"{icon} **[{score}/10] {title}**"
+        elements.append(self._card_div(title_md))
 
         if tier == RelevanceTier.HIGH:
-            # Full analysis
-            if paper.authors:
-                authors_str = ", ".join(paper.authors[:3])
-                if len(paper.authors) > 3:
-                    authors_str += f" +{len(paper.authors)-3}"
-                sections.append(self._make_text(f"  Authors: {authors_str}\n"))
-
-            if ap.analysis.summary:
-                sections.append(
-                    self._make_text(f"  Summary: {ap.analysis.summary[:500]}\n")
-                )
-
-            if ap.analysis.key_contributions:
-                contribs = "\n".join(
-                    f"    - {c}" for c in ap.analysis.key_contributions[:3]
-                )
-                sections.append(
-                    self._make_text(f"  Key Contributions:\n{contribs}\n")
-                )
-
-            if ap.analysis.potential_applications:
-                apps = ", ".join(ap.analysis.potential_applications[:3])
-                sections.append(self._make_text(f"  Applications: {apps}\n"))
-
-            # Link
-            if paper.source_url:
-                sections.append(self._make_link("  Paper Link", paper.source_url))
-                sections.append(self._make_text("\n"))
-
+            elements.extend(self._build_high_details(ap))
         elif tier == RelevanceTier.MEDIUM:
-            # Compact info
-            if paper.authors:
-                authors_str = ", ".join(paper.authors[:3])
-                sections.append(self._make_text(f"  Authors: {authors_str}\n"))
+            elements.extend(self._build_medium_details(ap))
 
-            if ap.analysis.summary:
-                sections.append(
-                    self._make_text(f"  Summary: {ap.analysis.summary[:300]}\n")
-                )
+        # Button for HIGH/MEDIUM
+        if tier in (RelevanceTier.HIGH, RelevanceTier.MEDIUM) and paper.source_url:
+            btn_text = "查看论文" if self.language == "zh" else "View Paper"
+            elements.append(self._card_button(btn_text, paper.source_url))
 
-            if ap.analysis.key_contributions:
-                contribs = ", ".join(ap.analysis.key_contributions[:3])
-                sections.append(
-                    self._make_text(f"  Contributions: {contribs}\n")
-                )
+        elements.append(self._card_hr())
+        return elements
 
-            if paper.source_url:
-                sections.append(self._make_link("Link", paper.source_url))
-                sections.append(self._make_text("\n"))
+    def _build_high_details(self, ap: AnalyzedPaper) -> list[dict]:
+        """Build detailed elements for HIGH-relevance papers."""
+        elements: list[dict] = []
+        paper = ap.paper
+        zh = self.language == "zh"
 
-        else:
-            # Low: title + link + score only (title already shown above)
-            if paper.source_url:
-                sections.append(self._make_link("  Link", paper.source_url))
-                sections.append(self._make_text("\n"))
+        # Authors
+        if paper.authors:
+            authors_str = ", ".join(paper.authors[:3])
+            if len(paper.authors) > 3:
+                authors_str += f" +{len(paper.authors)-3}"
+            label = "👤 **作者**" if zh else "👤 **Authors**"
+            elements.append(self._card_div(f"{label}：{authors_str}"))
 
-        # Separator
-        sections.append(self._make_text("\n"))
-        return sections
+        # Summary
+        if ap.analysis.summary:
+            label = "📝 **摘要**" if zh else "📝 **Summary**"
+            summary = ap.analysis.summary[:500].replace("\n", " ")
+            elements.append(self._card_div(f"{label}：{summary}"))
 
-    def _split_messages(
-        self, all_sections: list[dict], topic_stats: dict
-    ) -> list[dict]:
-        """Split sections into multiple messages if content exceeds size limit."""
-        messages: list[dict] = []
-        current_sections: list[dict] = []
+        # Key contributions
+        if ap.analysis.key_contributions:
+            label = "💡 **核心贡献**" if zh else "💡 **Key Contributions**"
+            contribs = "\n".join(f"  • {c}" for c in ap.analysis.key_contributions[:3])
+            elements.append(self._card_div(f"{label}：\n{contribs}"))
+
+        # Applications
+        if ap.analysis.potential_applications:
+            label = "🔧 **潜在应用**" if zh else "🔧 **Applications**"
+            apps = "、".join(ap.analysis.potential_applications[:3])
+            elements.append(self._card_div(f"{label}：{apps}"))
+
+        # Methodology Evaluation (Stage 2b)
+        if ap.analysis.methodology_evaluation:
+            label = "🔬 **方法论评估**" if zh else "🔬 **Methodology**"
+            content = ap.analysis.methodology_evaluation[:500].replace("\n", " ")
+            elements.append(self._card_div(f"{label}：\n{content}"))
+
+        # Limitations (Stage 2b)
+        if ap.analysis.limitations:
+            label = "⚠️ **局限性分析**" if zh else "⚠️ **Limitations**"
+            items = "\n".join(f"  • {l}" for l in ap.analysis.limitations[:5])
+            elements.append(self._card_div(f"{label}：\n{items}"))
+
+        # Future Directions (Stage 2b)
+        if ap.analysis.future_directions:
+            label = "🚀 **未来研究方向**" if zh else "🚀 **Future Directions**"
+            items = "\n".join(f"  • {d}" for d in ap.analysis.future_directions[:5])
+            elements.append(self._card_div(f"{label}：\n{items}"))
+
+        # Comparative Analysis (Stage 3)
+        if ap.analysis.comparative_analysis:
+            label = "📊 **对比分析**" if zh else "📊 **Comparative Analysis**"
+            content = ap.analysis.comparative_analysis[:500].replace("\n", " ")
+            if ap.analysis.compared_with:
+                if zh:
+                    content += f"\n（与 {len(ap.analysis.compared_with)} 篇相关论文对比）"
+                else:
+                    content += f"\n(Compared with {len(ap.analysis.compared_with)} related papers)"
+            elements.append(self._card_div(f"{label}：\n{content}"))
+
+        return elements
+
+    def _build_medium_details(self, ap: AnalyzedPaper) -> list[dict]:
+        """Build compact elements for MEDIUM-relevance papers."""
+        elements: list[dict] = []
+        paper = ap.paper
+        zh = self.language == "zh"
+
+        # Authors (compact)
+        if paper.authors:
+            authors_str = ", ".join(paper.authors[:3])
+            label = "👤" if zh else "👤"
+            elements.append(self._card_div(f"{label} {authors_str}"))
+
+        # Summary (truncated)
+        if ap.analysis.summary:
+            summary = ap.analysis.summary[:300].replace("\n", " ")
+            elements.append(self._card_div(f"📝 {summary}"))
+
+        # Contributions (inline)
+        if ap.analysis.key_contributions:
+            contribs = "、".join(ap.analysis.key_contributions[:3])
+            label = "💡" if zh else "💡"
+            elements.append(self._card_div(f"{label} {contribs}"))
+
+        return elements
+
+    # ── Card splitting ─────────────────────────────────────────────
+
+    def _split_cards(self, header: dict, all_elements: list[dict]) -> list[dict]:
+        """Split elements into multiple cards if content exceeds size limit."""
+        cards: list[dict] = []
+        current_elements: list[dict] = []
         current_size = 0
 
-        for section in all_sections:
-            section_json = json.dumps(section, ensure_ascii=False)
-            section_size = len(section_json.encode("utf-8"))
+        # Pre-compute header size
+        header_size = len(json.dumps({"header": header}, ensure_ascii=False).encode("utf-8"))
 
-            if current_size + section_size > MAX_CONTENT_BYTES and current_sections:
-                messages.append(self._make_message(current_sections, topic_stats))
-                current_sections = []
+        for element in all_elements:
+            elem_json = len(json.dumps(element, ensure_ascii=False).encode("utf-8"))
+
+            if current_size + elem_json + header_size > MAX_CONTENT_BYTES and current_elements:
+                cards.append(self._make_card(header, current_elements))
+                current_elements = []
                 current_size = 0
 
-            current_sections.append(section)
-            current_size += section_size
+            current_elements.append(element)
+            current_size += elem_json
 
-        if current_sections:
-            messages.append(self._make_message(current_sections, topic_stats))
+        if current_elements:
+            cards.append(self._make_card(header, current_elements))
 
-        return messages
+        return cards
 
-    def _make_message(self, sections: list[dict], topic_stats: dict) -> dict:
-        """Build a complete Feishu webhook message from content sections."""
-        total = sum(s.get("total", 0) for s in topic_stats.values())
-        title = f"Literature Digest ({total} papers)"
+    def _make_card(self, header: dict, elements: list[dict]) -> dict:
+        """Build a complete Feishu interactive card message."""
+        return {
+            "msg_type": "interactive",
+            "card": {
+                "header": header,
+                "elements": elements,
+            },
+        }
 
-        template = self._env.get_template("feishu_card.json.j2")
-        rendered = template.render(
-            language=self.language,
-            title=title,
-            content=sections,
-        )
-        return json.loads(rendered)
+    # ── HTTP ───────────────────────────────────────────────────────
 
     async def _post_message(
         self, client: httpx.AsyncClient, message: dict
@@ -239,7 +271,7 @@ class FeishuNotifier(Notifier):
                 timeout=15,
             )
             result = response.json()
-            if result.get("StatusCode") == 0 or result.get("code") == 0:
+            if result.get("code") == 0:
                 logger.info("Feishu notification sent successfully")
                 return True
             else:
@@ -251,21 +283,56 @@ class FeishuNotifier(Notifier):
 
     async def _send_no_papers(self, topic_stats: dict) -> bool:
         """Send notification when no new papers found."""
+        if self.language == "zh":
+            title = "📚 每日文献速递"
+            text = "今日没有发现新的相关论文。"
+        else:
+            title = "📚 Daily Literature Digest"
+            text = "No new relevant papers found today."
+
         message = {
-            "msg_type": "text",
-            "content": {
-                "text": "Literature Digest: No new papers found today."
+            "msg_type": "interactive",
+            "card": {
+                "header": {
+                    "title": {"tag": "plain_text", "content": title},
+                    "template": "blue",
+                },
+                "elements": [
+                    {"tag": "div", "text": {"tag": "lark_md", "content": text}},
+                ],
             },
         }
         async with httpx.AsyncClient() as client:
             return await self._post_message(client, message)
 
-    @staticmethod
-    def _make_text(text: str) -> dict:
-        """Create a Feishu rich text tag element."""
-        return {"tag": "text", "text": text}
+    # ── Card element helpers ───────────────────────────────────────
 
     @staticmethod
-    def _make_link(text: str, href: str) -> dict:
-        """Create a Feishu rich text link tag element."""
-        return {"tag": "a", "text": text, "href": href}
+    def _card_div(content: str) -> dict:
+        """Build a div element with lark_md markdown text."""
+        return {"tag": "div", "text": {"tag": "lark_md", "content": content}}
+
+    @staticmethod
+    def _card_hr() -> dict:
+        """Build a horizontal rule divider."""
+        return {"tag": "hr"}
+
+    @staticmethod
+    def _card_button(text: str, url: str, button_type: str = "primary") -> dict:
+        """Build an action block with a link button."""
+        return {
+            "tag": "action",
+            "actions": [
+                {
+                    "tag": "button",
+                    "text": {"tag": "plain_text", "content": text},
+                    "url": url,
+                    "type": button_type,
+                }
+            ],
+        }
+
+    @staticmethod
+    def _card_note(content: str) -> dict:
+        """Build a note element (small gray text)."""
+        return {"tag": "note", "elements": [{"tag": "plain_text", "content": content}]}
