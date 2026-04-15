@@ -71,7 +71,7 @@ Plans:
 - [ ] 03-02-PLAN.md -- Enhance Feishu HIGH-tier display with 4 new analysis sections, integrate Stage 2b/3 and history into main.py pipeline
 
 ### Phase 4: Zotero and Obsidian Integrations
-**Goal**: Researchers can archive papers to Zotero with one click and accumulate a searchable knowledge base in Obsidian over time
+**Goal**: Researchers can archive high-relevance papers to Zotero automatically and accumulate a searchable knowledge base in Obsidian with daily summaries, paper cards, and topic backlinks
 **Depends on**: Phase 3
 **Requirements**: ZTR-01, ZTR-02, ZTR-03, ZTR-04, ZTR-05, OBS-01, OBS-02, OBS-03, OBS-04
 **Success Criteria** (what must be TRUE):
@@ -80,12 +80,12 @@ Plans:
   3. User can configure an Obsidian vault Git repository and find daily summary notes and per-paper literature cards pushed to the vault after each run
   4. Literature cards in Obsidian contain structured metadata, AI analysis, and backlinks to related papers by topic, enabling knowledge graph navigation
   5. Both Zotero and Obsidian integrations are fully optional -- the pipeline runs normally without them configured
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
-- [ ] 04-03: TBD
+- [ ] 04-01-PLAN.md -- ZoteroConfig + ObsidianConfig models, ZoteroArchiver module (ZTR-01~05)
+- [ ] 04-02-PLAN.md -- ObsidianWriter module: paper cards, daily summary, backlinks, Git push (OBS-01~04)
+- [ ] 04-03-PLAN.md -- Pipeline integration: Steps 11/12 in main.py, config loader updates, config.example.yaml
 
 ## Progress
 
@@ -97,4 +97,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 1. End-to-End Pipeline Proof | 0/5 | Planning complete | - |
 | 2. Multi-Source Search and PDF Fetching | 0/3 | Planning complete | - |
 | 3. Advanced AI Analysis | 0/2 | Planning complete | - |
-| 4. Zotero and Obsidian Integrations | 0/? | Not started | - |
+| 4. Zotero and Obsidian Integrations | 0/3 | Planning complete | - |
