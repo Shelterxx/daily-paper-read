@@ -57,10 +57,10 @@
 
 ### Obsidian Integration
 
-- [ ] **OBS-01**: System generates per-paper markdown literature cards with structured metadata and AI analysis
-- [ ] **OBS-02**: System generates daily summary notes listing all pushed papers with relevance tiers
-- [ ] **OBS-03**: System organizes papers by topic/theme with Obsidian backlinks for knowledge graph building
-- [ ] **OBS-04**: System pushes generated notes to an independent Git vault repository via authenticated git push
+- [x] **OBS-01**: System generates per-paper markdown literature cards with structured metadata and AI analysis
+- [x] **OBS-02**: System generates daily summary notes listing all pushed papers with relevance tiers
+- [x] **OBS-03**: System organizes papers by topic/theme with Obsidian backlinks for knowledge graph building
+- [x] **OBS-04**: System pushes generated notes to an independent Git vault repository via authenticated git push
 - [x] **OBS-05**: Obsidian integration is fully optional — system works without vault repo configuration
 
 ### GitHub Actions Pipeline
@@ -133,10 +133,10 @@
 | ZTR-04 | Phase 4 | Pending |
 | ZTR-05 | Phase 4 | Pending |
 | ZTR-06 | Phase 1 | Complete |
-| OBS-01 | Phase 4 | Pending |
-| OBS-02 | Phase 4 | Pending |
-| OBS-03 | Phase 4 | Pending |
-| OBS-04 | Phase 4 | Pending |
+| OBS-01 | Phase 4 | Complete |
+| OBS-02 | Phase 4 | Complete |
+| OBS-03 | Phase 4 | Complete |
+| OBS-04 | Phase 4 | Complete |
 | OBS-05 | Phase 1 | Complete |
 | PIPE-01 | Phase 1 | Complete |
 | PIPE-02 | Phase 1 | Complete |
