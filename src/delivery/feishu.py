@@ -53,9 +53,9 @@ class FeishuNotifier(Notifier):
     def _build_messages(
         self, papers: list[AnalyzedPaper], topic_stats: dict
     ) -> list[dict]:
-        """Build interactive cards — one card per topic, HIGH+MEDIUM only."""
-        # Filter: only push HIGH and MEDIUM papers
-        relevant = [ap for ap in papers if ap.analysis.tier in (RelevanceTier.HIGH, RelevanceTier.MEDIUM)]
+        """Build interactive cards — one card per topic, HIGH only."""
+        # Filter: only push HIGH papers
+        relevant = [ap for ap in papers if ap.analysis.tier == RelevanceTier.HIGH]
 
         if not relevant:
             return []

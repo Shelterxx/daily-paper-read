@@ -120,11 +120,16 @@ class ArxivSource(SearchSource):
     async def _search_with_library(self, keyword: str, query: SearchQuery) -> list[Paper]:
         """Search using the arxiv library (primary method).
 
-        Uses tenacity retry on transient failures (HTTP 429, 500-level).
+        Compatible with arxiv>=2.4 (Query API) and arxiv>=3.0 (Search API).
         """
         import arxiv
 
-        search = arxiv.Query(
+        # arxiv 3.0+ uses Search; arxiv 2.x uses Query
+        SearchClass = getattr(arxiv, "Search", None) or getattr(arxiv, "Query", None)
+        if SearchClass is None:
+            raise AttributeError("Neither arxiv.Search nor arxiv.Query found")
+
+        search = SearchClass(
             query=keyword,
             max_results=query.max_results,
             sort_by=arxiv.SortCriterion.SubmittedDate,
@@ -176,7 +181,7 @@ class ArxivSource(SearchSource):
 
         encoded_kw = urllib.parse.quote(keyword)
         url = (
-            f"http://export.arxiv.org/api/query?search_query={encoded_kw}"
+            f"https://export.arxiv.org/api/query?search_query={encoded_kw}"
             f"&sortBy=submittedDate&sortOrder=descending&max_results={query.max_results}"
         )
 
