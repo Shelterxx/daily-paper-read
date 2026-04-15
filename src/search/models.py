@@ -81,6 +81,13 @@ class AnalysisResult(BaseModel):
     potential_applications: Optional[list[str]] = None
     extracted_keywords: list[str] = Field(default_factory=list)
     scoring_reason: Optional[str] = None
+    # Deep analysis fields (Stage 2b - ANLY-03)
+    methodology_evaluation: Optional[str] = None
+    limitations: Optional[list[str]] = None
+    future_directions: Optional[list[str]] = None
+    # Comparative analysis fields (Stage 3 - ANLY-04)
+    comparative_analysis: Optional[str] = None
+    compared_with: Optional[list[str]] = None
 
 
 class AnalyzedPaper(BaseModel):

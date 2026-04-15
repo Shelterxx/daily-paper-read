@@ -4,6 +4,18 @@ All prompts use {placeholder} syntax for str.format() and instruct the LLM
 to return strict JSON for reliable parsing.
 """
 
+
+def get_language_instruction(language: str) -> str:
+    """Return language instruction to append to prompts.
+
+    For "zh" and "mixed": instruct LLM to output analysis text in Chinese.
+    For "en": no extra instruction (default English behavior).
+    """
+    if language in ("zh", "mixed"):
+        return "Respond entirely in Chinese (中文). The 'summary', 'key_contributions', 'potential_applications', 'reason', 'methodology_evaluation', 'limitations', 'future_directions', and 'comparative_analysis' fields must all be written in Chinese. Paper titles mentioned within those fields should remain in their original English."
+    return ""
+
+
 KEYWORD_EXTRACTION_PROMPT = """You are a research librarian. Extract search keywords from the following research description for use in academic paper search (e.g., arXiv).
 
 Research description: {description}
@@ -30,6 +42,8 @@ Score from 1-10:
 
 Also extract 3-5 key technical terms/concepts from the paper.
 
+{language_instruction}
+
 Return strict JSON: {{"score": 7, "reason": "one sentence explanation", "keywords": ["term1", "term2"]}}"""
 
 ANALYSIS_PROMPT = """Provide a detailed analysis of this paper's relevance to the research area.
@@ -44,9 +58,57 @@ Provide:
 2. Exactly 3 key contributions as a list
 3. 2-3 potential application scenarios for this research
 
+{language_instruction}
+
 Return strict JSON:
 {{
   "summary": "2-3 paragraph summary...",
   "key_contributions": ["contribution 1", "contribution 2", "contribution 3"],
   "potential_applications": ["application 1", "application 2"]
+}}"""
+
+DEEP_METHODOLOGY_PROMPT = """Perform a deep methodology analysis of this research paper.
+
+Paper title: {title}
+Paper text: {text}
+Prior summary: {summary}
+Prior key contributions: {key_contributions}
+
+Analyze the following aspects:
+
+1. **Methodology Evaluation**: Evaluate the experimental design soundness, dataset scale and representativeness, baseline comparison choices, and reproducibility. Note any methodological strengths or novel approaches.
+
+2. **Limitations**: Identify both explicitly acknowledged limitations (stated by the authors) and implicit limitations you observe. Be specific about what is limited and why it matters.
+
+3. **Future Research Directions**: Suggest specific, actionable future research directions based on the paper's contributions and limitations. Avoid generic suggestions like "need more data" or "larger scale experiments" — focus on concrete next steps.
+
+{language_instruction}
+
+Return strict JSON:
+{{
+  "methodology_evaluation": "A paragraph evaluating the methodology...",
+  "limitations": ["limitation 1", "limitation 2", "limitation 3"],
+  "future_directions": ["direction 1", "direction 2", "direction 3"]
+}}"""
+
+COMPARATIVE_ANALYSIS_PROMPT = """Compare this paper against previously analyzed papers in the same research area.
+
+Target paper title: {title}
+Target paper abstract: {abstract}
+Target paper summary: {summary}
+
+Historical papers for comparison:
+{historical_papers}
+
+Compare the target paper against the historical papers above. Focus on:
+1. Key similarities and differences in research approach and methodology
+2. How the target paper's contributions relate to or extend prior work
+3. Unique aspects of the target paper not seen in the historical papers
+
+{language_instruction}
+
+Return strict JSON:
+{{
+  "comparative_analysis": "2-3 sentence comparison summarizing key similarities and differences...",
+  "key_differences": ["difference 1", "difference 2"]
 }}"""
