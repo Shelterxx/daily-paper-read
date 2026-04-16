@@ -40,12 +40,19 @@ def load_config(config_path: str = "config.yaml") -> AppConfig:
             f"Set it as a GitHub Secret or export it locally."
         )
 
-    # Validate Feishu webhook env var exists
+    # Validate Feishu sending config: App API mode or webhook fallback
+    has_app_api = (
+        config.feishu_app
+        and config.feishu_app.enabled
+        and os.environ.get(config.feishu_app.app_id_env)
+        and os.environ.get(config.feishu_app.app_secret_env)
+    )
     feishu_webhook = os.environ.get(config.notification.feishu_webhook_env)
-    if not feishu_webhook:
+    if not has_app_api and not feishu_webhook:
         raise ValueError(
-            f"Missing required environment variable: {config.notification.feishu_webhook_env}. "
-            f"Create a Feishu bot and add its webhook URL as a GitHub Secret."
+            "No Feishu sending method configured. Either:\n"
+            "  1. Enable feishu_app in config.yaml and set FEISHU_APP_ID + FEISHU_APP_SECRET\n"
+            "  2. Or set FEISHU_WEBHOOK_URL for webhook fallback"
         )
 
     # Validate Zotero credentials (optional -- only when zotero block exists and enabled)
