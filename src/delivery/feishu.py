@@ -511,8 +511,8 @@ class FeishuNotifier(Notifier):
         """Build a collapsible panel with a single content block.
 
         Args:
-            title: Section header in lark_md format.
-            content_md: Body content in lark_md format.
+            title: Section header text (lark_md format).
+            content_md: Body content text (lark_md format).
             expanded: Whether the panel starts expanded (default: collapsed).
 
         Returns:
@@ -521,14 +521,10 @@ class FeishuNotifier(Notifier):
         return {
             "tag": "collapsible_panel",
             "expanded": expanded,
-            "padding_v": "8px",
-            "padding_h": "12px",
-            "header": {"title": {"tag": "lark_md", "content": title}},
-            "vertical_gap": "8px",
-            "horizontal_gap": "8px",
+            "title": {"tag": "lark_md", "content": title},
             "content": {
                 "elements": [
-                    {"tag": "div", "text": {"tag": "lark_md", "content": content_md}}
+                    {"tag": "markdown", "content": content_md}
                 ]
             },
         }
