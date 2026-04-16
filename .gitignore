@@ -1,5 +1,5 @@
-# User configuration (contains personal preferences)
-config.yaml
+# User configuration (no secrets, safe to commit)
+# config.yaml
 
 # Runtime state directory (CI commits state back to repo)
 state/**/*

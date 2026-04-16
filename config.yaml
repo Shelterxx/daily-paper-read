@@ -1,0 +1,85 @@
+# Daily Literature Push Configuration (每日文献推送配置)
+# Copy this file to config.yaml and customize for your research.
+
+# Research topics: each topic defines a search scope with its own queries and thresholds
+research_topics:
+  - name: "排放清单与反演"
+    description: "Research on emission inventory development, inverse modeling for emission estimation, source apportionment, data assimilation for atmospheric emissions, satellite-based emission retrieval, bottom-up and top-down emission estimation methods, VOCs, NOx, PM2.5 emission sources, and anthropogenic/biogenic emission characterization"
+    max_push: 3
+    relevance_thresholds:
+      high: 8
+      medium: 7
+
+  - name: "大气环境智能计算"
+    description: "Application of machine learning, deep learning, data assimilation, remote sensing inversion, spatiotemporal modeling, and physics-informed neural networks to atmospheric environment research, including air quality prediction, emission estimation, satellite-based monitoring, model emulation, uncertainty quantification, and data-driven atmospheric chemistry modeling"
+    max_push: 3
+    relevance_thresholds:
+      high: 8
+      medium: 7
+
+  - name: "大气环境"
+    description: "Research on atmospheric pollution mechanisms, air quality monitoring and assessment, atmospheric chemistry, aerosol and ozone formation, source apportionment, health effects of air pollution, climate-air quality interactions, and regional/urban air quality management"
+    max_push: 3
+    relevance_thresholds:
+      high: 8
+      medium: 7
+
+# Global source toggles (individual topics can override)
+sources:
+  arxiv:
+    enabled: true
+    max_results: 20
+  sci_search:
+    enabled: true
+    max_results: 20
+  openalex:
+    enabled: true
+    max_results: 20
+
+# LLM API configuration (supports Claude, GLM, DeepSeek, MiniMax via OpenAI-compatible interface)
+llm:
+  scoring_model: "deepseek-chat"    # Fast model for batch scoring
+  analysis_model: "deepseek-chat"   # Capable model for deep analysis
+  base_url: "https://api.deepseek.com"       # Change for other providers
+  api_key_env: "LLM_API_KEY"                      # Name of env var holding API key
+
+# Notification settings
+notification:
+  feishu_webhook_env: "FEISHU_WEBHOOK_URL"        # Name of env var holding Feishu webhook URL
+  language: "zh"                                    # Output language: zh, en, or mixed
+  compact_cards: false                              # Collapsible panel only works with App API mode
+
+# How far back to search for new papers (hours)
+search_timeframe_hours: 24
+
+# State directory for tracking seen papers (relative to repo root)
+state_dir: "state"
+
+# Zotero integration (optional — set enabled: true and fill .env to activate)
+zotero:
+  enabled: true
+  collection_root: "DailyPapers"
+  archive_threshold: 9              # Only archive papers scoring >= 9 (push threshold is 8)
+
+# Obsidian vault integration (optional — set enabled: true and fill .env to activate)
+obsidian:
+  enabled: true
+  vault_repo_url: "https://github.com/Shelterxx/literature-vault.git"
+
+# Interactive "Interested" button (optional — no Feishu App registration needed!)
+# When enabled, HIGH papers show a "⭐ 感兴趣" button in Feishu cards.
+# Users click the button → browser opens archive service → paper archived to Zotero.
+# Works with existing webhook bot — just deploy the archive service to a free cloud platform.
+#
+# Setup:
+#   1. Set ARCHIVE_SECRET env var (any random string for URL signing)
+#   2. Deploy archive service: uvicorn src.callback_server:app --host 0.0.0.0 --port $PORT
+#      (deploy to Railway/Render/Vercel for free cloud hosting)
+#   3. Set callback_base_url below to your deployed service URL
+#   4. Set FEISHU_VERIFICATION_TOKEN env var = same value as ARCHIVE_SECRET
+feishu_app:
+  enabled: true
+  app_id_env: "FEISHU_APP_ID"
+  app_secret_env: "FEISHU_APP_SECRET"
+  chat_id_env: "FEISHU_CHAT_ID"
+  callback_base_url: ""           # e.g. "https://your-app.railway.app"
