@@ -6,7 +6,7 @@
 
 - **多源搜索**：arXiv、sci_search (Supabase)、OpenAlex、Semantic Scholar
 - **AI 四阶段分析**：评分 → 深度分析 → 方法论评估 → 历史对比
-- **飞书卡片推送**：折叠式卡片布局，关键信息一目了然，详细分析按需展开
+- **飞书折叠卡片**：概览信息直接可见，详细分析折叠展开，支持交互按钮
 - **交互式感兴趣按钮**（可选）：点击「感兴趣」一键归档到 Zotero
 - **Zotero 归档**（可选）：元数据、AI 标签、分析笔记、PDF 附件
 - **Obsidian 知识库**（可选）：论文卡片、每日摘要、wiki-link backlinks
@@ -32,9 +32,13 @@ cp config.example.yaml config.yaml
 创建 `.env` 文件：
 
 ```env
-# 必需
+# 必需：LLM API
 LLM_API_KEY=your-api-key
-FEISHU_WEBHOOK_URL=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
+
+# 必需：飞书应用（折叠卡片推送）
+FEISHU_APP_ID=cli_xxxxx
+FEISHU_APP_SECRET=xxxxx
+FEISHU_CHAT_ID=oc_xxxxx
 
 # 搜索源（可选）
 SCI_SEARCH_API_TOKEN=
@@ -46,12 +50,21 @@ ZOTERO_USER_ID=
 ZOTERO_API_KEY=
 OBSIDIAN_VAULT_PAT=
 
-# 飞书交互按钮（可选）
+# 飞书交互按钮（可选，需部署回调服务）
 FEISHU_VERIFICATION_TOKEN=
 FEISHU_ENCRYPT_KEY=
 ```
 
-### 4. 运行
+### 4. 飞书应用配置
+
+1. 在 [open.feishu.cn](https://open.feishu.cn) 创建企业自建应用
+2. 添加「机器人」能力
+3. 权限管理中开通「获取与发送单聊、群组消息」（`im:message`）
+4. 发布应用（企业内自建应用一般免审核）
+5. 将机器人添加到推送群
+6. 从群设置中获取 `chat_id`，连同 `App ID`、`App Secret` 填入 `.env`
+
+### 5. 运行
 
 ```bash
 python -m src.main
@@ -89,25 +102,26 @@ llm:
   api_key_env: "LLM_API_KEY"
 
 notification:
-  feishu_webhook_env: "FEISHU_WEBHOOK_URL"
+  feishu_webhook_env: "FEISHU_WEBHOOK_URL"  # Webhook 备用模式
   language: "zh"                   # zh / en / mixed
-  compact_cards: true              # 折叠式卡片布局（推荐开启）
 
-# Zotero 归档（自动模式：所有 HIGH 论文自动归档）
+# Zotero 归档
 zotero:
   enabled: false
   collection_root: "DailyPapers"
+  archive_threshold: 9             # 仅归档评分 ≥ 此阈值的论文
 
 obsidian:
   enabled: false
   vault_repo_url: ""
 
-# 飞书交互按钮（可选，需注册飞书应用）
+# 飞书应用（推荐，支持折叠面板和交互按钮）
 feishu_app:
-  enabled: false
-  verification_token_env: "FEISHU_VERIFICATION_TOKEN"
-  encrypt_key_env: "FEISHU_ENCRYPT_KEY"
-  callback_base_url: ""           # 回调服务器公网地址
+  enabled: true
+  app_id_env: "FEISHU_APP_ID"
+  app_secret_env: "FEISHU_APP_SECRET"
+  chat_id_env: "FEISHU_CHAT_ID"
+  callback_base_url: ""           # 交互按钮回调地址（可选）
 ```
 
 ## 管线流程
@@ -128,59 +142,49 @@ feishu_app:
 | 8 | HIGH 论文方法论评估（limitations + future directions） |
 | 9 | 9-10 分论文与历史论文对比分析 |
 | 10 | 飞书折叠卡片推送 + 保存状态 |
-| 11 | Zotero 归档（自动模式）或保存论文数据（交互模式） |
+| 11 | Zotero 归档（按 archive_threshold 筛选）或保存论文数据（交互模式） |
 | 12 | Obsidian 推送（可选） |
 
 ## 飞书卡片布局
 
-HIGH 相关论文使用折叠式卡片布局，减少信息密度：
+通过飞书应用 API 发送，支持折叠面板组件。HIGH 相关论文布局：
 
 **始终可见**：
 - 标题 + 相关性评分 + 来源链接
 - 作者 + 发表日期
-- 短摘要（150 字）
+- 短摘要（200 字）
 - 核心贡献
 
 **点击展开**：
-- 潜在应用
-- 方法论评估
-- 局限性分析
-- 未来研究方向
-- 对比分析
+- 🔧 潜在应用
+- 🔬 方法论评估
+- ⚠️ 局限性分析
+- 🚀 未来研究方向
+- 📊 对比分析（9-10 分论文）
 
-**元数据页脚**：DOI 链接、关键词、PDF 链接
+**元数据页脚**：DOI 链接、关键词
 
-可通过 `compact_cards: false` 切换回传统平铺布局。
+**操作按钮**：查看论文、PDF 下载、感兴趣（可选）
 
-## 飞书交互按钮（可选）
+## 交互式「感兴趣」按钮（可选）
 
-启用交互式「感兴趣」按钮后，用户可以在飞书卡片中一键归档论文到 Zotero，替代自动归档模式。
+启用后用户可在飞书卡片中点击「感兴趣」一键归档论文到 Zotero，需部署回调服务。
 
-### 前置条件
-
-1. 在 [open.feishu.cn](https://open.feishu.cn) 注册飞书应用（非自定义机器人）
-2. 启用「机器人」能力 + 「卡片回调」事件订阅
-3. 设置回调 URL 为 `https://your-server.com/feishu/callback`
-4. 将应用机器人添加到推送群
-5. 配置环境变量 `FEISHU_VERIFICATION_TOKEN`、`FEISHU_ENCRYPT_KEY`
-
-### 启动回调服务器
+### 部署回调服务器
 
 ```bash
-uvicorn src.callback_server:app --host 0.0.0.0 --port 8080
+uvicorn src.callback_server:app --host 0.0.0.0 --port $PORT
 ```
-
-服务器提供两个端点：
 
 | 端点 | 说明 |
 |------|------|
-| `POST /feishu/callback` | 接收飞书卡片按钮回调，归档论文到 Zotero |
-| `GET /health` | 健康检查，返回已加载论文数量 |
+| `GET /api/archive` | 处理「感兴趣」按钮点击，归档到 Zotero，返回 HTML 结果页 |
+| `POST /feishu/callback` | 飞书卡片回调（需飞书应用注册回调订阅） |
+| `GET /health` | 健康检查 |
 
-启用后，管线行为变化：
-- **自动归档关闭**：HIGH 论文不再自动归档到 Zotero
-- **按需归档**：用户在飞书卡片中点击「⭐ 感兴趣，归档到 Zotero」按钮触发归档
-- **论文数据持久化**：管线将论文数据保存到 `state/papers_for_callback.json`，供回调服务器读取
+启用交互按钮后管线行为：
+- 仅 `archive_threshold` 以下的论文不自动归档，用户可按需点击归档
+- 论文数据保存到 `state/papers_for_callback.json`，供回调服务读取
 
 ## 项目结构
 
@@ -210,7 +214,7 @@ src/
 │   └── text_extractor.py
 ├── delivery/
 │   ├── base.py          # Notifier 基类
-│   └── feishu.py        # 飞书折叠卡片推送 + 交互按钮
+│   └── feishu.py        # 飞书卡片推送（App API + 折叠面板）
 ├── integrations/
 │   ├── zotero.py        # Zotero 归档（批量 + 单篇按需）
 │   └── obsidian.py      # Obsidian 知识库
