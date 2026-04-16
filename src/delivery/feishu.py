@@ -79,15 +79,11 @@ class FeishuNotifier(Notifier):
 
         cards: list[dict] = []
         for topic_name, topic_papers in by_topic.items():
-            # Use topic_stats (real counts from pipeline) for the header
-            ts = topic_stats.get(topic_name, {})
-            topic_high = ts.get("high", len(topic_papers))
-            topic_medium = ts.get("medium", 0)
-
+            n = len(topic_papers)
             if self.language == "zh":
-                title = f"📚 {topic_name}（{topic_high} 高 + {topic_medium} 中）"
+                title = f"📚 {topic_name}（推送 {n} 篇）"
             else:
-                title = f"📚 {topic_name} ({topic_high} high + {topic_medium} med)"
+                title = f"📚 {topic_name} ({n} papers)"
 
             header = {
                 "title": {"tag": "plain_text", "content": title},
