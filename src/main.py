@@ -363,6 +363,28 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
     stats["total_papers"] = len(all_analyzed)
 
     if all_analyzed:
+        # Cap HIGH papers per topic to max_push for notification
+        notify_analyzed = []
+        max_push_by_topic = {t.name: t.max_push for t in config.research_topics}
+        for topic in config.research_topics:
+            topic_papers = [ap for ap in all_analyzed if ap.topic_name == topic.name]
+            high_topic = [ap for ap in topic_papers if ap.analysis.tier == RelevanceTier.HIGH]
+            high_topic.sort(key=lambda ap: ap.analysis.relevance_score, reverse=True)
+            cap = max_push_by_topic.get(topic.name, 20)
+            if len(high_topic) > cap:
+                logger.info(
+                    f"  Capping '{topic.name}' push: {len(high_topic)} HIGH → {cap} "
+                    f"(top {cap} by score)"
+                )
+                # Keep capped HIGH + all non-HIGH (for stats)
+                capped_high = set(ap.paper.paper_id for ap in high_topic[:cap])
+                notify_analyzed.extend(
+                    ap for ap in topic_papers
+                    if ap.paper.paper_id in capped_high or ap.analysis.tier != RelevanceTier.HIGH
+                )
+            else:
+                notify_analyzed.extend(topic_papers)
+
         # Send Feishu notification
         webhook_url = os.environ.get(config.notification.feishu_webhook_env)
         notifier = FeishuNotifier(
@@ -372,7 +394,7 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
             feishu_app_config=config.feishu_app,
         )
         try:
-            notify_ok = await notifier.send(all_analyzed, topic_stats)
+            notify_ok = await notifier.send(notify_analyzed, topic_stats)
             if notify_ok:
                 logger.info("  Notification sent successfully")
             else:
