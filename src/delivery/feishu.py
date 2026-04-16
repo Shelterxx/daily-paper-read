@@ -79,8 +79,10 @@ class FeishuNotifier(Notifier):
 
         cards: list[dict] = []
         for topic_name, topic_papers in by_topic.items():
-            topic_high = sum(1 for ap in topic_papers if ap.analysis.tier == RelevanceTier.HIGH)
-            topic_medium = len(topic_papers) - topic_high
+            # Use topic_stats (real counts from pipeline) for the header
+            ts = topic_stats.get(topic_name, {})
+            topic_high = ts.get("high", len(topic_papers))
+            topic_medium = ts.get("medium", 0)
 
             if self.language == "zh":
                 title = f"📚 {topic_name}（{topic_high} 高 + {topic_medium} 中）"
