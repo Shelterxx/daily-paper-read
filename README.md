@@ -11,67 +11,80 @@
 - **Zotero 归档**（可选）：元数据、AI 标签、分析笔记、PDF 附件
 - **Obsidian 知识库**（可选）：论文卡片、每日摘要、wiki-link backlinks
 
-## 快速开始
+## 部署（GitHub Actions 自动运行）
 
-**GitHub Actions 部署（推荐）**：Fork → 配置 Secrets → 提交 config.yaml → 自动每天推送。详见下方 [部署](#部署github-actions-自动运行) 章节。
+Fork 本仓库后按以下步骤配置，GitHub Actions 会自动每天定时运行管线，无需本地电脑。
 
-**本地运行**：
-
-### 1. 安装依赖
-
-```bash
-pip install -r requirements.txt
-```
-
-### 2. 配置
-
-```bash
-cp config.example.yaml config.yaml
-```
-
-编辑 `config.yaml`，设置研究主题和搜索源。
-
-### 3. 环境变量
-
-创建 `.env` 文件：
-
-```env
-# 必需：LLM API
-LLM_API_KEY=your-api-key
-
-# 必需：飞书应用（折叠卡片推送）
-FEISHU_APP_ID=cli_xxxxx
-FEISHU_APP_SECRET=xxxxx
-FEISHU_CHAT_ID=oc_xxxxx
-
-# 搜索源（可选）
-SCI_SEARCH_API_TOKEN=
-OPENALEX_EMAIL=          # 加速 OpenAlex 访问
-S2_API_KEY=              # Semantic Scholar 提高限额
-
-# 集成（可选）
-ZOTERO_USER_ID=
-ZOTERO_API_KEY=
-OBSIDIAN_VAULT_PAT=
-
-# 飞书交互按钮（可选，需部署回调服务）
-FEISHU_VERIFICATION_TOKEN=
-FEISHU_ENCRYPT_KEY=
-```
-
-### 4. 飞书应用配置
+### Step 1: 创建飞书应用
 
 1. 在 [open.feishu.cn](https://open.feishu.cn) 创建企业自建应用
 2. 添加「机器人」能力
 3. 权限管理中开通「获取与发送单聊、群组消息」（`im:message`）
-4. 发布应用（企业内自建应用一般免审核）
+4. 发布应用（企业内一般免审核）
 5. 将机器人添加到推送群
-6. 从群设置中获取 `chat_id`，连同 `App ID`、`App Secret` 填入 `.env`
+6. 记下 `App ID`、`App Secret`、群的 `chat_id`（群设置中查看）
 
-### 5. 运行
+### Step 2: 配置 Secrets
+
+在你的 GitHub 仓库中，进入 **Settings → Secrets and variables → Actions → New repository secret**，逐个添加以下 Secrets（注意是 **Repository secrets**，不是 Environment secrets）：
+
+| Secret | 必需 | 说明 |
+|--------|------|------|
+| `LLM_API_KEY` | 是 | LLM API 密钥（DeepSeek / OpenAI 等） |
+| `FEISHU_APP_ID` | 是 | 飞书应用 App ID |
+| `FEISHU_APP_SECRET` | 是 | 飞书应用 App Secret |
+| `FEISHU_CHAT_ID` | 是 | 推送群的 chat_id |
+| `OPENALEX_EMAIL` | 建议 | 任意邮箱，激活 OpenAlex polite pool（10 req/s），避免超时 |
+| `ZOTERO_USER_ID` | 否 | Zotero 用户 ID |
+| `ZOTERO_API_KEY` | 否 | Zotero API Key |
+| `OBSIDIAN_VAULT_PAT` | 否 | GitHub PAT（Obsidian 仓库写权限） |
+| `SCI_SEARCH_API_TOKEN` | 否 | sci_search API Token |
+| `SCI_SEARCH_API_URL` | 否 | sci_search API URL |
+
+### Step 3: 提交配置文件
+
+仓库中的 `config.example.yaml` 是模板。你需要创建自己的 `config.yaml`：
 
 ```bash
+# 方法一：克隆后本地创建
+cp config.example.yaml config.yaml
+# 编辑 config.yaml，设置研究主题、搜索源等
+# 然后提交（config.yaml 没有敏感信息，密钥都在 Secrets 里）
+git add config.yaml
+git commit -m "add my config"
+git push
+
+# 方法二：直接在 GitHub 网页上创建
+# 进入仓库 → Add file → Create new file → 命名为 config.yaml
+# 参照 config.example.yaml 填写内容
+```
+
+### Step 4: 运行
+
+- **自动运行**：每天北京时间 09:00 自动执行（cron: `0 1 * * *` UTC）
+- **手动触发**：Actions 页面 → Daily Literature Push → Run workflow
+- **查看日志**：Actions 页面查看每次运行的结果
+
+### 自定义推送时间
+
+编辑 `.github/workflows/daily-push.yml` 中的 cron 表达式：
+
+```yaml
+schedule:
+  - cron: '0 1 * * *'   # UTC 01:00 = 北京 09:00
+  # - cron: '0 3 * * *' # UTC 03:00 = 北京 11:00
+```
+
+### 本地运行
+
+不用 GitHub Actions，也可以本地定时运行：
+
+```bash
+# 手动执行
 python -m src.main
+
+# crontab 定时
+0 9 * * * cd /path/to/project && python -m src.main >> logs/pipeline.log 2>&1
 ```
 
 ## 配置说明
@@ -235,79 +248,3 @@ src/
 | DeepSeek | `https://api.deepseek.com` | 默认配置 |
 | OpenAI | `https://api.openai.com/v1/` | Claude/Anthropic 也走兼容接口 |
 | 本地模型 | `http://localhost:8000/v1/` | Ollama, vLLM 等 |
-
-## 部署（GitHub Actions 自动运行）
-
-Fork 本仓库后按以下步骤配置，GitHub Actions 会自动每天定时运行管线。
-
-### Step 1: 创建飞书应用
-
-1. 在 [open.feishu.cn](https://open.feishu.cn) 创建企业自建应用
-2. 添加「机器人」能力
-3. 权限管理中开通「获取与发送单聊、群组消息」（`im:message`）
-4. 发布应用（企业内一般免审核）
-5. 将机器人添加到推送群
-6. 记下 `App ID`、`App Secret`、群的 `chat_id`（群设置中查看）
-
-### Step 2: 配置 Secrets
-
-在你的 GitHub 仓库中，进入 **Settings → Secrets and variables → Actions → New repository secret**，逐个添加以下 Secrets（注意是 **Repository secrets**，不是 Environment secrets）：
-
-| Secret | 必需 | 说明 |
-|--------|------|------|
-| `LLM_API_KEY` | 是 | LLM API 密钥（DeepSeek / OpenAI 等） |
-| `FEISHU_APP_ID` | 是 | 飞书应用 App ID |
-| `FEISHU_APP_SECRET` | 是 | 飞书应用 App Secret |
-| `FEISHU_CHAT_ID` | 是 | 推送群的 chat_id |
-| `OPENALEX_EMAIL` | 建议 | 任意邮箱，激活 OpenAlex polite pool（10 req/s），避免超时 |
-| `ZOTERO_USER_ID` | 否 | Zotero 用户 ID |
-| `ZOTERO_API_KEY` | 否 | Zotero API Key |
-| `OBSIDIAN_VAULT_PAT` | 否 | GitHub PAT（Obsidian 仓库写权限） |
-| `SCI_SEARCH_API_TOKEN` | 否 | sci_search API Token |
-| `SCI_SEARCH_API_URL` | 否 | sci_search API URL |
-
-### Step 3: 提交配置文件
-
-仓库中的 `config.example.yaml` 是模板。你需要创建自己的 `config.yaml`：
-
-```bash
-# 方法一：克隆后本地创建
-cp config.example.yaml config.yaml
-# 编辑 config.yaml，设置研究主题、搜索源等
-# 然后提交（config.yaml 没有敏感信息，密钥都在 Secrets 里）
-git add config.yaml
-git commit -m "add my config"
-git push
-
-# 方法二：直接在 GitHub 网页上创建
-# 进入仓库 → Add file → Create new file → 命名为 config.yaml
-# 参照 config.example.yaml 填写内容
-```
-
-### Step 4: 运行
-
-- **自动运行**：每天北京时间 09:00 自动执行（cron: `0 1 * * *` UTC）
-- **手动触发**：Actions 页面 → Daily Literature Push → Run workflow
-- **查看日志**：Actions 页面查看每次运行的结果
-
-### 自定义推送时间
-
-编辑 `.github/workflows/daily-push.yml` 中的 cron 表达式：
-
-```yaml
-schedule:
-  - cron: '0 1 * * *'   # UTC 01:00 = 北京 09:00
-  # - cron: '0 3 * * *' # UTC 03:00 = 北京 11:00
-```
-
-### 本地运行
-
-不用 GitHub Actions，也可以本地定时运行：
-
-```bash
-# 手动执行
-python -m src.main
-
-# crontab 定时
-0 9 * * * cd /path/to/project && python -m src.main >> logs/pipeline.log 2>&1
-```
