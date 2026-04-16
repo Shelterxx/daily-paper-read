@@ -251,7 +251,7 @@ Fork 本仓库后按以下步骤配置，GitHub Actions 会自动每天定时运
 
 ### Step 2: 配置 Secrets
 
-在你的 GitHub 仓库中，进入 **Settings → Secrets and variables → Actions**，添加以下 Secrets：
+在你的 GitHub 仓库中，进入 **Settings → Secrets and variables → Actions → New repository secret**，逐个添加以下 Secrets（注意是 **Repository secrets**，不是 Environment secrets）：
 
 | Secret | 必需 | 说明 |
 |--------|------|------|
