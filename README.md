@@ -13,6 +13,10 @@
 
 ## 快速开始
 
+**GitHub Actions 部署（推荐）**：Fork → 配置 Secrets → 提交 config.yaml → 自动每天推送。详见下方 [部署](#部署github-actions-自动运行) 章节。
+
+**本地运行**：
+
 ### 1. 安装依赖
 
 ```bash
@@ -232,20 +236,77 @@ src/
 | OpenAI | `https://api.openai.com/v1/` | Claude/Anthropic 也走兼容接口 |
 | 本地模型 | `http://localhost:8000/v1/` | Ollama, vLLM 等 |
 
-## 定时运行
+## 部署（GitHub Actions 自动运行）
 
-GitHub Actions 示例：
+Fork 本仓库后按以下步骤配置，GitHub Actions 会自动每天定时运行管线。
 
-```yaml
-on:
-  schedule:
-    - cron: '0 8 * * *'  # 每天 UTC 8:00（北京 16:00）
-  workflow_dispatch:
-```
+### Step 1: 创建飞书应用
 
-或本地 cron：
+1. 在 [open.feishu.cn](https://open.feishu.cn) 创建企业自建应用
+2. 添加「机器人」能力
+3. 权限管理中开通「获取与发送单聊、群组消息」（`im:message`）
+4. 发布应用（企业内一般免审核）
+5. 将机器人添加到推送群
+6. 记下 `App ID`、`App Secret`、群的 `chat_id`（群设置中查看）
+
+### Step 2: 配置 Secrets
+
+在你的 GitHub 仓库中，进入 **Settings → Secrets and variables → Actions**，添加以下 Secrets：
+
+| Secret | 必需 | 说明 |
+|--------|------|------|
+| `LLM_API_KEY` | 是 | LLM API 密钥（DeepSeek / OpenAI 等） |
+| `FEISHU_APP_ID` | 是 | 飞书应用 App ID |
+| `FEISHU_APP_SECRET` | 是 | 飞书应用 App Secret |
+| `FEISHU_CHAT_ID` | 是 | 推送群的 chat_id |
+| `ZOTERO_USER_ID` | 否 | Zotero 用户 ID |
+| `ZOTERO_API_KEY` | 否 | Zotero API Key |
+| `OBSIDIAN_VAULT_PAT` | 否 | GitHub PAT（Obsidian 仓库写权限） |
+| `SCI_SEARCH_API_TOKEN` | 否 | sci_search API Token |
+| `SCI_SEARCH_API_URL` | 否 | sci_search API URL |
+
+### Step 3: 提交配置文件
+
+仓库中的 `config.example.yaml` 是模板。你需要创建自己的 `config.yaml`：
 
 ```bash
-# crontab -e
-0 8 * * * cd /path/to/project && python -m src.main >> logs/pipeline.log 2>&1
+# 方法一：克隆后本地创建
+cp config.example.yaml config.yaml
+# 编辑 config.yaml，设置研究主题、搜索源等
+# 然后提交（config.yaml 没有敏感信息，密钥都在 Secrets 里）
+git add config.yaml
+git commit -m "add my config"
+git push
+
+# 方法二：直接在 GitHub 网页上创建
+# 进入仓库 → Add file → Create new file → 命名为 config.yaml
+# 参照 config.example.yaml 填写内容
+```
+
+### Step 4: 运行
+
+- **自动运行**：每天北京时间 09:00 自动执行（cron: `0 1 * * *` UTC）
+- **手动触发**：Actions 页面 → Daily Literature Push → Run workflow
+- **查看日志**：Actions 页面查看每次运行的结果
+
+### 自定义推送时间
+
+编辑 `.github/workflows/daily-push.yml` 中的 cron 表达式：
+
+```yaml
+schedule:
+  - cron: '0 1 * * *'   # UTC 01:00 = 北京 09:00
+  # - cron: '0 3 * * *' # UTC 03:00 = 北京 11:00
+```
+
+### 本地运行
+
+不用 GitHub Actions，也可以本地定时运行：
+
+```bash
+# 手动执行
+python -m src.main
+
+# crontab 定时
+0 9 * * * cd /path/to/project && python -m src.main >> logs/pipeline.log 2>&1
 ```
