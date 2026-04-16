@@ -70,8 +70,10 @@ class OpenAlexSource(SearchSource):
         self._email = os.environ.get("OPENALEX_EMAIL", "")
         if self._email:
             logger.info(f"OpenAlex using polite pool with email: {self._email}")
+            self._concurrency = MAX_CONCURRENT_REQUESTS
         else:
             logger.info("OpenAlex using standard pool (set OPENALEX_EMAIL for faster access)")
+            self._concurrency = 2  # Standard pool is heavily rate-limited
 
     @property
     def name(self) -> str:
@@ -89,7 +91,7 @@ class OpenAlexSource(SearchSource):
         Returns:
             Deduplicated list of Paper objects from OpenAlex.
         """
-        semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
+        semaphore = asyncio.Semaphore(self._concurrency)
         all_papers: list[Paper] = []
         seen_ids: set[str] = set()
 
@@ -155,12 +157,12 @@ class OpenAlexSource(SearchSource):
             params["mailto"] = self._email
 
         @retry(
-            stop=stop_after_attempt(2),
-            wait=wait_exponential(multiplier=2, min=2, max=30),
+            stop=stop_after_attempt(4),
+            wait=wait_exponential(multiplier=2, min=4, max=60),
             retry=retry_if_exception_type((httpx.TimeoutException, httpx.HTTPStatusError)),
         )
         async def _fetch():
-            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
                 response = await client.get(API_BASE_URL, params=params)
                 if response.status_code >= 500:
                     raise httpx.HTTPStatusError(
