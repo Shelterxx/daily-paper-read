@@ -27,7 +27,7 @@ research_topics:
 # Global source toggles (individual topics can override)
 sources:
   arxiv:
-    enabled: true
+    enabled: false                     # arXiv 对环境领域噪声大，不建议启用
     max_results: 20
   sci_search:
     enabled: true

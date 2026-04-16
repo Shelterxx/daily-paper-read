@@ -40,7 +40,7 @@ research_topics:
 # Global source toggles
 sources:
   arxiv:
-    enabled: true
+    enabled: false                     # 对环境/地学领域噪声较大，建议禁用
     max_results: 20
   sci_search:
     enabled: false                     # Requires SCI_SEARCH_API_TOKEN

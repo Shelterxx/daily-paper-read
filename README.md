@@ -4,7 +4,7 @@
 
 ## 功能
 
-- **多源搜索**：arXiv、sci_search (Supabase)、OpenAlex、Semantic Scholar
+- **多源搜索**：sci_search (Supabase)、OpenAlex、arXiv、Semantic Scholar
 - **AI 四阶段分析**：评分 → 深度分析 → 方法论评估 → 历史对比
 - **飞书折叠卡片**：概览信息直接可见，详细分析折叠展开，支持交互按钮
 - **交互式感兴趣按钮**（可选）：点击「感兴趣」一键归档到 Zotero
@@ -87,7 +87,7 @@ research_topics:
 
 sources:
   arxiv:
-    enabled: true
+    enabled: false                   # 对环境/地学领域噪声较大，建议禁用
     max_results: 20
   sci_search:
     enabled: true
