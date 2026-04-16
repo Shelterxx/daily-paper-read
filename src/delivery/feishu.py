@@ -613,14 +613,22 @@ class FeishuNotifier(Notifier):
 
     @staticmethod
     def _collapsible_panel(title: str, content_md: str, expanded: bool = False) -> dict:
-        """Build a collapsible panel (requires App API sending mode)."""
+        """Build a collapsible panel (requires App API sending mode).
+
+        Structure per Feishu docs:
+          header.title → panel title
+          elements → panel content (markdown elements)
+        """
         return {
             "tag": "collapsible_panel",
             "expanded": expanded,
-            "title": {"tag": "lark_md", "content": title},
-            "content": {
-                "elements": [
-                    {"tag": "markdown", "content": content_md}
-                ]
+            "header": {
+                "title": {
+                    "tag": "markdown",
+                    "content": title,
+                },
             },
+            "elements": [
+                {"tag": "markdown", "content": content_md}
+            ],
         }
