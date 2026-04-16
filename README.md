@@ -259,6 +259,7 @@ Fork 本仓库后按以下步骤配置，GitHub Actions 会自动每天定时运
 | `FEISHU_APP_ID` | 是 | 飞书应用 App ID |
 | `FEISHU_APP_SECRET` | 是 | 飞书应用 App Secret |
 | `FEISHU_CHAT_ID` | 是 | 推送群的 chat_id |
+| `OPENALEX_EMAIL` | 建议 | 任意邮箱，激活 OpenAlex polite pool（10 req/s），避免超时 |
 | `ZOTERO_USER_ID` | 否 | Zotero 用户 ID |
 | `ZOTERO_API_KEY` | 否 | Zotero API Key |
 | `OBSIDIAN_VAULT_PAT` | 否 | GitHub PAT（Obsidian 仓库写权限） |
