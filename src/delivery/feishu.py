@@ -1,10 +1,17 @@
-"""Feishu webhook notifier with interactive cards and tiered display."""
+"""Feishu notifier with App API support and collapsible panel cards.
+
+Supports two sending modes:
+  1. App API (recommended): Uses app_id/app_secret to send via /im/v1/messages.
+     Supports collapsible_panel, interactive buttons, and all card features.
+  2. Webhook (fallback): Simple webhook URL posting. Limited card components.
+"""
 
 import hashlib
 import hmac
 import json
 import logging
 import os
+import time
 import urllib.parse
 from collections import defaultdict
 from typing import Optional
@@ -19,12 +26,16 @@ logger = logging.getLogger(__name__)
 # Feishu card payload limit ~30KB; use 28KB conservatively
 MAX_CONTENT_BYTES = 28000
 
+# Feishu API endpoints
+FEISHU_TOKEN_URL = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
+FEISHU_MESSAGE_URL = "https://open.feishu.cn/open-apis/im/v1/messages"
+
 
 class FeishuNotifier(Notifier):
-    """Feishu webhook notifier using interactive card format.
+    """Feishu notifier using App API (preferred) or webhook fallback.
 
-    Builds rich, visually-structured cards with colored headers,
-    markdown text, action buttons, and tiered paper display.
+    Builds rich cards with collapsible panels for detailed analysis,
+    sending via Feishu App API when configured.
     """
 
     def __init__(
@@ -38,19 +49,62 @@ class FeishuNotifier(Notifier):
         self.language = language
         self.compact_cards = compact_cards
         self.feishu_app_config = feishu_app_config
+        self._use_app_api = (
+            feishu_app_config is not None
+            and feishu_app_config.enabled
+            and os.environ.get(feishu_app_config.app_id_env)
+            and os.environ.get(feishu_app_config.app_secret_env)
+        )
+        self._cached_token: Optional[str] = None
+        self._token_expires: float = 0
+
+        if self._use_app_api:
+            logger.info("Feishu: using App API mode (supports collapsible_panel)")
+        elif webhook_url:
+            logger.info("Feishu: using webhook mode (no collapsible_panel)")
+
+    # ── Token management (App API) ──────────────────────────────────
+
+    async def _get_tenant_token(self, client: httpx.AsyncClient) -> Optional[str]:
+        """Get or refresh tenant_access_token for App API."""
+        now = time.time()
+        if self._cached_token and now < self._token_expires - 60:
+            return self._cached_token
+
+        app_id = os.environ.get(self.feishu_app_config.app_id_env, "")
+        app_secret = os.environ.get(self.feishu_app_config.app_secret_env, "")
+
+        try:
+            resp = await client.post(
+                FEISHU_TOKEN_URL,
+                json={"app_id": app_id, "app_secret": app_secret},
+                timeout=10,
+            )
+            data = resp.json()
+            if data.get("code") == 0:
+                self._cached_token = data["tenant_access_token"]
+                self._token_expires = now + data.get("expire", 7200)
+                logger.info("Feishu: obtained tenant_access_token")
+                return self._cached_token
+            else:
+                logger.error(f"Feishu token error: {data}")
+                return None
+        except Exception as e:
+            logger.error(f"Feishu token request failed: {e}")
+            return None
+
+    # ── Main send ───────────────────────────────────────────────────
 
     async def send(self, papers: list[AnalyzedPaper], topic_stats: dict) -> bool:
-        """Send tiered paper digest to Feishu as interactive cards."""
-        if not self.webhook_url:
-            logger.warning("Feishu webhook URL not configured, skipping notification")
-            return False
-
+        """Send tiered paper digest to Feishu."""
         if not papers:
             return await self._send_no_papers(topic_stats)
 
         messages = self._build_messages(papers, topic_stats)
-        all_ok = True
+        if not messages:
+            return await self._send_no_papers(topic_stats)
 
+        all_ok = True
         async with httpx.AsyncClient() as client:
             for i, content in enumerate(messages):
                 ok = await self._post_message(client, content)
@@ -66,16 +120,16 @@ class FeishuNotifier(Notifier):
         self, papers: list[AnalyzedPaper], topic_stats: dict
     ) -> list[dict]:
         """Build interactive cards — one card per topic, HIGH only."""
-        # Filter: only push HIGH papers
         relevant = [ap for ap in papers if ap.analysis.tier == RelevanceTier.HIGH]
 
         if not relevant:
             return []
 
-        # Group by topic
         by_topic: dict[str, list[AnalyzedPaper]] = defaultdict(list)
         for ap in relevant:
             by_topic[ap.topic_name].append(ap)
+
+        use_panels = self._use_app_api or self.compact_cards
 
         cards: list[dict] = []
         for topic_name, topic_papers in by_topic.items():
@@ -98,30 +152,25 @@ class FeishuNotifier(Notifier):
 
             elements = []
             for ap in sorted_papers:
-                elements.extend(self._build_paper_elements(ap))
+                elements.extend(self._build_paper_elements(ap, use_panels))
 
-            # Split into multiple cards if this topic exceeds size limit
             cards.extend(self._split_cards(header, elements))
 
         return cards
 
-    def _build_paper_elements(self, ap: AnalyzedPaper) -> list[dict]:
+    def _build_paper_elements(self, ap: AnalyzedPaper, use_panels: bool = False) -> list[dict]:
         """Build card elements for one paper based on tier."""
         elements: list[dict] = []
         tier = ap.analysis.tier
         score = ap.analysis.relevance_score
         paper = ap.paper
+        zh = self.language == "zh"
 
         # Escape lark_md special chars in title
         title = paper.title.replace("[", "［").replace("]", "］")
 
         # Tier icon
-        if tier == RelevanceTier.HIGH:
-            icon = "🔥"
-        elif tier == RelevanceTier.MEDIUM:
-            icon = "📄"
-        else:
-            icon = "📌"
+        icon = "🔥" if tier == RelevanceTier.HIGH else ("📄" if tier == RelevanceTier.MEDIUM else "📌")
 
         # Title line
         if paper.source_url:
@@ -131,119 +180,58 @@ class FeishuNotifier(Notifier):
         elements.append(self._card_div(title_md))
 
         if tier == RelevanceTier.HIGH:
-            if self.compact_cards:
+            if use_panels and self._use_app_api:
+                elements.extend(self._build_high_collapsible(ap))
+            elif use_panels:
                 elements.extend(self._build_high_details_compact(ap))
             else:
                 elements.extend(self._build_high_details(ap))
         elif tier == RelevanceTier.MEDIUM:
             elements.extend(self._build_medium_details(ap))
 
-        # Button for HIGH/MEDIUM
+        # Buttons
+        actions = []
         if tier in (RelevanceTier.HIGH, RelevanceTier.MEDIUM) and paper.source_url:
-            btn_text = "查看论文" if self.language == "zh" else "View Paper"
-            elements.append(self._card_button(btn_text, paper.source_url))
+            btn_text = "查看论文" if zh else "View Paper"
+            actions.append({
+                "tag": "button",
+                "text": {"tag": "plain_text", "content": btn_text},
+                "url": paper.source_url,
+                "type": "primary",
+            })
+        if paper.pdf_url:
+            actions.append({
+                "tag": "button",
+                "text": {"tag": "plain_text", "content": "PDF"},
+                "url": paper.pdf_url,
+                "type": "default",
+            })
 
-        # Interactive "interested" button for HIGH papers (open_url, no Feishu App needed)
-        if tier == RelevanceTier.HIGH and self.feishu_app_config and self.feishu_app_config.enabled:
-            button = self._card_interested_button(ap)
-            if button:
-                elements.append(button)
+        # Interactive "interested" button for HIGH papers
+        if tier == RelevanceTier.HIGH and self.feishu_app_config and self.feishu_app_config.callback_base_url:
+            url = self._generate_archive_url(ap)
+            if url:
+                btn_text = "⭐ 感兴趣" if zh else "⭐ Interested"
+                actions.append({
+                    "tag": "button",
+                    "text": {"tag": "plain_text", "content": btn_text},
+                    "url": url,
+                    "type": "primary",
+                })
+
+        if actions:
+            elements.append({"tag": "action", "actions": actions})
 
         elements.append(self._card_hr())
         return elements
 
-    def _build_high_details(self, ap: AnalyzedPaper) -> list[dict]:
-        """Build detailed elements for HIGH-relevance papers."""
-        elements: list[dict] = []
-        paper = ap.paper
-        zh = self.language == "zh"
+    def _build_high_collapsible(self, ap: AnalyzedPaper) -> list[dict]:
+        """Build HIGH details with collapsible panels (App API mode).
 
-        # Authors
-        if paper.authors:
-            authors_str = ", ".join(paper.authors[:3])
-            if len(paper.authors) > 3:
-                authors_str += f" +{len(paper.authors)-3}"
-            label = "👤 **作者**" if zh else "👤 **Authors**"
-            elements.append(self._card_div(f"{label}：{authors_str}"))
-
-        # Summary
-        if ap.analysis.summary:
-            label = "📝 **摘要**" if zh else "📝 **Summary**"
-            summary = ap.analysis.summary[:500].replace("\n", " ")
-            elements.append(self._card_div(f"{label}：{summary}"))
-
-        # Key contributions
-        if ap.analysis.key_contributions:
-            label = "💡 **核心贡献**" if zh else "💡 **Key Contributions**"
-            contribs = "\n".join(f"  • {c}" for c in ap.analysis.key_contributions[:3])
-            elements.append(self._card_div(f"{label}：\n{contribs}"))
-
-        # Applications
-        if ap.analysis.potential_applications:
-            label = "🔧 **潜在应用**" if zh else "🔧 **Applications**"
-            apps = "、".join(ap.analysis.potential_applications[:3])
-            elements.append(self._card_div(f"{label}：{apps}"))
-
-        # Methodology Evaluation (Stage 2b)
-        if ap.analysis.methodology_evaluation:
-            label = "🔬 **方法论评估**" if zh else "🔬 **Methodology**"
-            content = ap.analysis.methodology_evaluation[:500].replace("\n", " ")
-            elements.append(self._card_div(f"{label}：\n{content}"))
-
-        # Limitations (Stage 2b)
-        if ap.analysis.limitations:
-            label = "⚠️ **局限性分析**" if zh else "⚠️ **Limitations**"
-            items = "\n".join(f"  • {l}" for l in ap.analysis.limitations[:5])
-            elements.append(self._card_div(f"{label}：\n{items}"))
-
-        # Future Directions (Stage 2b)
-        if ap.analysis.future_directions:
-            label = "🚀 **未来研究方向**" if zh else "🚀 **Future Directions**"
-            items = "\n".join(f"  • {d}" for d in ap.analysis.future_directions[:5])
-            elements.append(self._card_div(f"{label}：\n{items}"))
-
-        # Comparative Analysis (Stage 3)
-        if ap.analysis.comparative_analysis:
-            label = "📊 **对比分析**" if zh else "📊 **Comparative Analysis**"
-            content = ap.analysis.comparative_analysis[:500].replace("\n", " ")
-            if ap.analysis.compared_with:
-                if zh:
-                    content += f"\n（与 {len(ap.analysis.compared_with)} 篇相关论文对比）"
-                else:
-                    content += f"\n(Compared with {len(ap.analysis.compared_with)} related papers)"
-            elements.append(self._card_div(f"{label}：\n{content}"))
-
-        return elements
-
-    def _build_medium_details(self, ap: AnalyzedPaper) -> list[dict]:
-        """Build compact elements for MEDIUM-relevance papers."""
-        elements: list[dict] = []
-        paper = ap.paper
-        zh = self.language == "zh"
-
-        # Authors (compact)
-        if paper.authors:
-            authors_str = ", ".join(paper.authors[:3])
-            label = "👤" if zh else "👤"
-            elements.append(self._card_div(f"{label} {authors_str}"))
-
-        # Summary (truncated)
-        if ap.analysis.summary:
-            summary = ap.analysis.summary[:300].replace("\n", " ")
-            elements.append(self._card_div(f"📝 {summary}"))
-
-        # Contributions (inline)
-        if ap.analysis.key_contributions:
-            contribs = "、".join(ap.analysis.key_contributions[:3])
-            label = "💡" if zh else "💡"
-            elements.append(self._card_div(f"{label} {contribs}"))
-
-        return elements
-
-    def _build_high_details_compact(self, ap: AnalyzedPaper) -> list[dict]:
-        """Build compact elements for HIGH-relevance papers with collapsible panels.
-
-        Layout: essential info visible upfront, detailed analysis in collapsible panels.
+        Layout:
+          Always visible: Authors+Date, short summary, key contributions
+          Collapsible: applications, methodology, limitations, future, comparison
+          Footer: DOI, keywords, PDF link
         """
         elements: list[dict] = []
         paper = ap.paper
@@ -251,7 +239,7 @@ class FeishuNotifier(Notifier):
 
         # --- Always visible ---
 
-        # Authors + Date (combined line)
+        # Authors + Date
         parts = []
         if paper.authors:
             authors_str = ", ".join(paper.authors[:3])
@@ -263,14 +251,14 @@ class FeishuNotifier(Notifier):
         if parts:
             elements.append(self._card_div(" | ".join(parts)))
 
-        # Short summary (150 chars)
+        # Short summary
         if ap.analysis.summary:
-            summary = ap.analysis.summary[:150].replace("\n", " ")
-            if len(ap.analysis.summary) > 150:
+            summary = ap.analysis.summary[:200].replace("\n", " ")
+            if len(ap.analysis.summary) > 200:
                 summary += "..."
             elements.append(self._card_div(f"📝 {summary}"))
 
-        # Key contributions (always shown — most actionable)
+        # Key contributions (always shown)
         if ap.analysis.key_contributions:
             label = "💡 **核心贡献**" if zh else "💡 **Key Contributions**"
             contribs = "\n".join(f"  • {c}" for c in ap.analysis.key_contributions[:3])
@@ -284,33 +272,31 @@ class FeishuNotifier(Notifier):
             apps = "、".join(ap.analysis.potential_applications[:3])
             elements.append(self._collapsible_panel(label, apps))
 
-        # Methodology Evaluation
+        # Methodology
         if ap.analysis.methodology_evaluation:
             label = "🔬 **方法论评估**" if zh else "🔬 **Methodology**"
-            content = ap.analysis.methodology_evaluation[:300].replace("\n", " ")
+            content = ap.analysis.methodology_evaluation[:500].replace("\n", " ")
             elements.append(self._collapsible_panel(label, content))
 
         # Limitations
         if ap.analysis.limitations:
-            label = "⚠️ **局限性分析**" if zh else "⚠️ **Limitations**"
+            label = "⚠️ **局限性**" if zh else "⚠️ **Limitations**"
             items = "\n".join(f"  • {l}" for l in ap.analysis.limitations[:5])
             elements.append(self._collapsible_panel(label, items))
 
-        # Future Directions
+        # Future directions
         if ap.analysis.future_directions:
-            label = "🚀 **未来研究方向**" if zh else "🚀 **Future Directions**"
+            label = "🚀 **未来方向**" if zh else "🚀 **Future Directions**"
             items = "\n".join(f"  • {d}" for d in ap.analysis.future_directions[:5])
             elements.append(self._collapsible_panel(label, items))
 
-        # Comparative Analysis
+        # Comparative analysis
         if ap.analysis.comparative_analysis:
             label = "📊 **对比分析**" if zh else "📊 **Comparative Analysis**"
-            content = ap.analysis.comparative_analysis[:300].replace("\n", " ")
+            content = ap.analysis.comparative_analysis[:500].replace("\n", " ")
             if ap.analysis.compared_with:
-                if zh:
-                    content += f"\n（与 {len(ap.analysis.compared_with)} 篇相关论文对比）"
-                else:
-                    content += f"\n(Compared with {len(ap.analysis.compared_with)} related papers)"
+                n = len(ap.analysis.compared_with)
+                content += f"\n（与 {n} 篇相关论文对比）" if zh else f"\n(Compared with {n} papers)"
             elements.append(self._collapsible_panel(label, content))
 
         # --- Metadata footer ---
@@ -319,43 +305,130 @@ class FeishuNotifier(Notifier):
             meta_parts.append(f"DOI: [{paper.doi}](https://doi.org/{paper.doi})")
         if ap.analysis.extracted_keywords:
             kw_str = ", ".join(ap.analysis.extracted_keywords[:5])
-            meta_parts.append(f"Keywords: {kw_str}")
-        if paper.pdf_url:
-            meta_parts.append(f"[PDF]({paper.pdf_url})")
+            meta_parts.append(f"🏷 {kw_str}")
         if meta_parts:
-            elements.append(self._card_div(" | ".join(meta_parts)))
+            elements.append(self._card_note(" | ".join(meta_parts)))
 
         return elements
 
-    def _card_interested_button(self, ap: AnalyzedPaper) -> dict:
-        """Build URL button for on-demand Zotero archiving (open_url mode).
+    def _build_high_details(self, ap: AnalyzedPaper) -> list[dict]:
+        """Build flat detailed elements for HIGH-relevance papers (webhook fallback)."""
+        elements: list[dict] = []
+        paper = ap.paper
+        zh = self.language == "zh"
 
-        No Feishu App required — works with existing webhook bot.
-        When clicked, opens the archive service URL in the browser,
-        which triggers Zotero archiving and shows a result page.
-        """
-        if not self.feishu_app_config or not self.feishu_app_config.callback_base_url:
-            return {}
+        if paper.authors:
+            authors_str = ", ".join(paper.authors[:3])
+            if len(paper.authors) > 3:
+                authors_str += f" +{len(paper.authors)-3}"
+            label = "👤 **作者**" if zh else "👤 **Authors**"
+            elements.append(self._card_div(f"{label}：{authors_str}"))
 
-        url = self._generate_archive_url(ap)
-        if not url:
-            return {}
+        if ap.analysis.summary:
+            label = "📝 **摘要**" if zh else "📝 **Summary**"
+            summary = ap.analysis.summary[:500].replace("\n", " ")
+            elements.append(self._card_div(f"{label}：{summary}"))
 
-        btn_text = "⭐ 感兴趣，归档到 Zotero" if self.language == "zh" else "⭐ Interested, Archive to Zotero"
-        return {
-            "tag": "action",
-            "actions": [
-                {
-                    "tag": "button",
-                    "text": {"tag": "plain_text", "content": btn_text},
-                    "type": "primary",
-                    "url": url,
-                }
-            ],
-        }
+        if ap.analysis.key_contributions:
+            label = "💡 **核心贡献**" if zh else "💡 **Key Contributions**"
+            contribs = "\n".join(f"  • {c}" for c in ap.analysis.key_contributions[:3])
+            elements.append(self._card_div(f"{label}：\n{contribs}"))
+
+        if ap.analysis.potential_applications:
+            label = "🔧 **潜在应用**" if zh else "🔧 **Applications**"
+            apps = "、".join(ap.analysis.potential_applications[:3])
+            elements.append(self._card_div(f"{label}：{apps}"))
+
+        if ap.analysis.methodology_evaluation:
+            label = "🔬 **方法论评估**" if zh else "🔬 **Methodology**"
+            content = ap.analysis.methodology_evaluation[:500].replace("\n", " ")
+            elements.append(self._card_div(f"{label}：\n{content}"))
+
+        if ap.analysis.limitations:
+            label = "⚠️ **局限性分析**" if zh else "⚠️ **Limitations**"
+            items = "\n".join(f"  • {l}" for l in ap.analysis.limitations[:5])
+            elements.append(self._card_div(f"{label}：\n{items}"))
+
+        if ap.analysis.future_directions:
+            label = "🚀 **未来研究方向**" if zh else "🚀 **Future Directions**"
+            items = "\n".join(f"  • {d}" for d in ap.analysis.future_directions[:5])
+            elements.append(self._card_div(f"{label}：\n{items}"))
+
+        if ap.analysis.comparative_analysis:
+            label = "📊 **对比分析**" if zh else "📊 **Comparative Analysis**"
+            content = ap.analysis.comparative_analysis[:500].replace("\n", " ")
+            if ap.analysis.compared_with:
+                content += f"\n（与 {len(ap.analysis.compared_with)} 篇相关论文对比）" if zh else f"\n(Compared with {len(ap.analysis.compared_with)} papers)"
+            elements.append(self._card_div(f"{label}：\n{content}"))
+
+        return elements
+
+    def _build_high_details_compact(self, ap: AnalyzedPaper) -> list[dict]:
+        """Build compact elements for HIGH-relevance papers (webhook compact mode, no collapsible)."""
+        elements: list[dict] = []
+        paper = ap.paper
+        zh = self.language == "zh"
+
+        parts = []
+        if paper.authors:
+            authors_str = ", ".join(paper.authors[:3])
+            if len(paper.authors) > 3:
+                authors_str += f" +{len(paper.authors) - 3}"
+            parts.append(f"👤 {authors_str}")
+        if paper.published_date:
+            parts.append(paper.published_date.strftime("%Y-%m-%d"))
+        if parts:
+            elements.append(self._card_div(" | ".join(parts)))
+
+        if ap.analysis.summary:
+            summary = ap.analysis.summary[:150].replace("\n", " ")
+            if len(ap.analysis.summary) > 150:
+                summary += "..."
+            elements.append(self._card_div(f"📝 {summary}"))
+
+        if ap.analysis.key_contributions:
+            label = "💡 **核心贡献**" if zh else "💡 **Key Contributions**"
+            contribs = "\n".join(f"  • {c}" for c in ap.analysis.key_contributions[:3])
+            elements.append(self._card_div(f"{label}：\n{contribs}"))
+
+        # Grouped secondary info (flat, since no collapsible)
+        secondary = []
+        if ap.analysis.potential_applications:
+            apps = "、".join(ap.analysis.potential_applications[:3])
+            secondary.append(f"🔧 {apps}")
+        if ap.analysis.methodology_evaluation:
+            secondary.append(f"🔬 {ap.analysis.methodology_evaluation[:200]}")
+        if secondary:
+            elements.append(self._card_div("\n".join(secondary)))
+
+        return elements
+
+    def _build_medium_details(self, ap: AnalyzedPaper) -> list[dict]:
+        """Build compact elements for MEDIUM-relevance papers."""
+        elements: list[dict] = []
+        paper = ap.paper
+
+        if paper.authors:
+            authors_str = ", ".join(paper.authors[:3])
+            elements.append(self._card_div(f"👤 {authors_str}"))
+
+        if ap.analysis.summary:
+            summary = ap.analysis.summary[:300].replace("\n", " ")
+            elements.append(self._card_div(f"📝 {summary}"))
+
+        if ap.analysis.key_contributions:
+            contribs = "、".join(ap.analysis.key_contributions[:3])
+            elements.append(self._card_div(f"💡 {contribs}"))
+
+        return elements
+
+    # ── Archive URL generation ──────────────────────────────────────
 
     def _generate_archive_url(self, ap: AnalyzedPaper) -> str:
         """Generate a signed URL for the archive service."""
+        if not self.feishu_app_config or not self.feishu_app_config.callback_base_url:
+            return ""
+
         base = self.feishu_app_config.callback_base_url.rstrip("/")
         secret = os.environ.get(self.feishu_app_config.verification_token_env, "")
 
@@ -363,34 +436,22 @@ class FeishuNotifier(Notifier):
         doi = ap.paper.doi or ""
 
         if not doi:
-            logger.debug(f"Skipping archive URL for paper without DOI: {paper_id}")
             return ""
 
-        # HMAC signature for verification
         msg = f"{paper_id}:{doi}"
         sig = hmac.new(secret.encode(), msg.encode(), hashlib.sha256).hexdigest()[:16]
 
-        params = {
-            "pid": paper_id,
-            "doi": doi,
-            "sig": sig,
-        }
-
-        # Keywords for Zotero tags
+        params = {"pid": paper_id, "doi": doi, "sig": sig}
         if ap.analysis.extracted_keywords:
             params["kw"] = ",".join(ap.analysis.extracted_keywords[:5])
-
-        # Short summary for Zotero note
         if ap.analysis.summary:
             params["s"] = ap.analysis.summary[:200]
-
-        # Contributions for Zotero note
         if ap.analysis.key_contributions:
             params["c"] = "|".join(ap.analysis.key_contributions[:3])
 
         return f"{base}/api/archive?" + urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
 
-    # ── Card splitting ─────────────────────────────────────────────
+    # ── Card splitting ──────────────────────────────────────────────
 
     def _split_cards(self, header: dict, all_elements: list[dict]) -> list[dict]:
         """Split elements into multiple cards if content exceeds size limit."""
@@ -398,7 +459,6 @@ class FeishuNotifier(Notifier):
         current_elements: list[dict] = []
         current_size = 0
 
-        # Pre-compute header size
         header_size = len(json.dumps({"header": header}, ensure_ascii=False).encode("utf-8"))
 
         for element in all_elements:
@@ -427,12 +487,75 @@ class FeishuNotifier(Notifier):
             },
         }
 
-    # ── HTTP ───────────────────────────────────────────────────────
+    # ── HTTP posting ────────────────────────────────────────────────
 
     async def _post_message(
         self, client: httpx.AsyncClient, message: dict
     ) -> bool:
-        """Send a single message to Feishu webhook."""
+        """Send a card message via App API or webhook."""
+        if self._use_app_api:
+            return await self._post_app_api(client, message)
+        elif self.webhook_url:
+            return await self._post_webhook(client, message)
+        else:
+            logger.warning("No Feishu sending method configured")
+            return False
+
+    async def _post_app_api(
+        self, client: httpx.AsyncClient, message: dict
+    ) -> bool:
+        """Send via Feishu App API (/im/v1/messages)."""
+        token = await self._get_tenant_token(client)
+        if not token:
+            logger.error("Failed to get Feishu token, falling back to webhook")
+            if self.webhook_url:
+                return await self._post_webhook(client, message)
+            return False
+
+        chat_id = os.environ.get(self.feishu_app_config.chat_id_env, "")
+        if not chat_id:
+            logger.error("FEISHU_CHAT_ID not set")
+            return False
+
+        # App API expects card JSON in the body, not wrapped in msg_type
+        card_json = message.get("card", message)
+
+        try:
+            resp = await client.post(
+                FEISHU_MESSAGE_URL,
+                params={"receive_id": chat_id, "receive_id_type": "chat_id"},
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "receive_id": chat_id,
+                    "msg_type": "interactive",
+                    "content": json.dumps(card_json, ensure_ascii=False),
+                },
+                timeout=15,
+            )
+            result = resp.json()
+            if result.get("code") == 0:
+                logger.info("Feishu App API: message sent successfully")
+                return True
+            else:
+                logger.error(f"Feishu App API error: {result}")
+                # Fall back to webhook if available
+                if self.webhook_url:
+                    logger.info("Falling back to webhook")
+                    return await self._post_webhook(client, message)
+                return False
+        except Exception as e:
+            logger.error(f"Feishu App API failed: {e}")
+            if self.webhook_url:
+                return await self._post_webhook(client, message)
+            return False
+
+    async def _post_webhook(
+        self, client: httpx.AsyncClient, message: dict
+    ) -> bool:
+        """Send via webhook URL (fallback)."""
         try:
             response = await client.post(
                 self.webhook_url,
@@ -441,13 +564,13 @@ class FeishuNotifier(Notifier):
             )
             result = response.json()
             if result.get("code") == 0:
-                logger.info("Feishu notification sent successfully")
+                logger.info("Feishu webhook: message sent successfully")
                 return True
             else:
-                logger.error(f"Feishu API error: {result}")
+                logger.error(f"Feishu webhook error: {result}")
                 return False
         except Exception as e:
-            logger.error(f"Feishu notification failed: {e}")
+            logger.error(f"Feishu webhook failed: {e}")
             return False
 
     async def _send_no_papers(self, topic_stats: dict) -> bool:
@@ -474,50 +597,23 @@ class FeishuNotifier(Notifier):
         async with httpx.AsyncClient() as client:
             return await self._post_message(client, message)
 
-    # ── Card element helpers ───────────────────────────────────────
+    # ── Card element helpers ────────────────────────────────────────
 
     @staticmethod
     def _card_div(content: str) -> dict:
-        """Build a div element with lark_md markdown text."""
         return {"tag": "div", "text": {"tag": "lark_md", "content": content}}
 
     @staticmethod
     def _card_hr() -> dict:
-        """Build a horizontal rule divider."""
         return {"tag": "hr"}
 
     @staticmethod
-    def _card_button(text: str, url: str, button_type: str = "primary") -> dict:
-        """Build an action block with a link button."""
-        return {
-            "tag": "action",
-            "actions": [
-                {
-                    "tag": "button",
-                    "text": {"tag": "plain_text", "content": text},
-                    "url": url,
-                    "type": button_type,
-                }
-            ],
-        }
-
-    @staticmethod
     def _card_note(content: str) -> dict:
-        """Build a note element (small gray text)."""
         return {"tag": "note", "elements": [{"tag": "plain_text", "content": content}]}
 
     @staticmethod
     def _collapsible_panel(title: str, content_md: str, expanded: bool = False) -> dict:
-        """Build a collapsible panel with a single content block.
-
-        Args:
-            title: Section header text (lark_md format).
-            content_md: Body content text (lark_md format).
-            expanded: Whether the panel starts expanded (default: collapsed).
-
-        Returns:
-            Feishu collapsible_panel element dict.
-        """
+        """Build a collapsible panel (requires App API sending mode)."""
         return {
             "tag": "collapsible_panel",
             "expanded": expanded,

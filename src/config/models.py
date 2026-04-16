@@ -76,12 +76,25 @@ class NotificationConfig(BaseModel):
 
 
 class FeishuAppConfig(BaseModel):
-    """Feishu App settings for interactive card callbacks."""
+    """Feishu App settings for sending cards via App API."""
 
     enabled: bool = Field(
         default=False,
-        description="Enable interactive button for on-demand Zotero archiving",
+        description="Use Feishu App API for sending (supports collapsible_panel)",
     )
+    app_id_env: str = Field(
+        default="FEISHU_APP_ID",
+        description="Env var name for Feishu App ID",
+    )
+    app_secret_env: str = Field(
+        default="FEISHU_APP_SECRET",
+        description="Env var name for Feishu App Secret",
+    )
+    chat_id_env: str = Field(
+        default="FEISHU_CHAT_ID",
+        description="Env var name for target group chat ID",
+    )
+    # Callback settings (for interactive "Interested" button, optional)
     verification_token_env: str = Field(
         default="FEISHU_VERIFICATION_TOKEN",
         description="Env var name for card callback verification token",
@@ -92,7 +105,7 @@ class FeishuAppConfig(BaseModel):
     )
     callback_base_url: str = Field(
         default="",
-        description="Public URL where callback server is reachable, e.g. https://example.com",
+        description="Public URL where callback server is reachable (for interactive button)",
     )
 
 
