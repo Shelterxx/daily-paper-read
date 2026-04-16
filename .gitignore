@@ -1,8 +1,9 @@
 # User configuration (contains personal preferences)
 config.yaml
 
-# Runtime state directory
-state/
+# Runtime state directory (CI commits state back to repo)
+state/**/*
+!state/.gitkeep
 
 # Python bytecode
 __pycache__/

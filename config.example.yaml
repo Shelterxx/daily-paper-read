@@ -1,84 +1,91 @@
 # Daily Literature Push Configuration (每日文献推送配置)
 # Copy this file to config.yaml and customize for your research.
 #
-# Environment Variables Reference:
+# Environment Variables (set in .env locally or GitHub Secrets for CI):
 # ──────────────────────────────────────────────────────────
 # Required:
-#   LLM_API_KEY           - API key for LLM scoring/analysis
-#   FEISHU_WEBHOOK_URL     - Feishu bot webhook URL
+#   LLM_API_KEY            - API key for LLM scoring/analysis
+#   FEISHU_APP_ID          - Feishu App ID
+#   FEISHU_APP_SECRET      - Feishu App Secret
+#   FEISHU_CHAT_ID         - Target group chat ID
 #
-# Search Sources (set these to enable additional sources):
-#   SCI_SEARCH_API_TOKEN  - API token for sci_search (Supabase Edge Function)
-#   S2_API_KEY            - Semantic Scholar API key (optional, higher rate limits)
-#   OPENALEX_EMAIL        - Email for OpenAlex polite pool (optional, 10 req/s)
-#
-# PDF Fetching (multi-channel):
-#   UNPAYWALL_EMAIL       - Email for Unpaywall OA PDF lookup (optional)
+# Optional:
+#   SCI_SEARCH_API_TOKEN   - sci_search API token
+#   SCI_SEARCH_API_URL     - sci_search API URL
+#   OPENALEX_EMAIL         - OpenAlex polite pool (faster access)
+#   S2_API_KEY             - Semantic Scholar higher rate limits
+#   UNPAYWALL_EMAIL        - Unpaywall OA PDF lookup
+#   ZOTERO_USER_ID         - Zotero user ID
+#   ZOTERO_API_KEY         - Zotero API key
+#   OBSIDIAN_VAULT_PAT     - GitHub PAT for Obsidian vault repo
+#   FEISHU_VERIFICATION_TOKEN - For interactive button callback
 # ──────────────────────────────────────────────────────────
 
 # Research topics: each topic defines a search scope with its own queries and thresholds
 research_topics:
-  - name: "LLM Reasoning"
-    # Natural language description of your research direction.
-    # The system will use LLM to extract search keywords from this description.
-    description: "Research on reasoning capabilities of large language models, including chain-of-thought, planning, and multi-step problem solving"
-    # Optional: manually specify keywords to override automatic extraction
-    # keywords: ["chain-of-thought", "LLM reasoning", "planning"]
-    max_push: 10           # Max papers to push per topic per run
+  - name: "Your Topic Name"
+    description: "Natural language description of your research direction"
+    max_push: 5                        # Max papers to push per topic per run
     relevance_thresholds:
-      high: 8              # Score >= 8: full analysis with contributions and applications
-      medium: 6            # Score >= 6: summary + key contributions
+      high: 8                          # Score >= this triggers deep analysis + push
+      medium: 7                        # Score >= this is medium (not pushed)
 
-  - name: "Multi-Agent RL"
-    description: "Multi-agent reinforcement learning, cooperative and competitive settings, emergent communication"
-    max_push: 10
+  # - name: "Second Topic"
+  #   description: "Another research direction"
+  #   max_push: 5
+  #   relevance_thresholds:
+  #     high: 8
+  #     medium: 7
 
-# Global source toggles (individual topics can override)
-# Enable/disable each search source. Each source can have max_results configured.
+# Global source toggles
 sources:
   arxiv:
     enabled: true
     max_results: 20
   sci_search:
-    enabled: false           # Requires SCI_SEARCH_API_TOKEN env var
+    enabled: false                     # Requires SCI_SEARCH_API_TOKEN
     max_results: 20
   openalex:
-    enabled: false           # Set OPENALEX_EMAIL env var for polite pool (10 req/s)
+    enabled: true                      # Set OPENALEX_EMAIL for faster access
     max_results: 20
   semantic_scholar:
-    enabled: false           # Optional S2_API_KEY env var for higher rate limits
+    enabled: false                     # Optional S2_API_KEY
     max_results: 20
 
-# LLM API configuration (supports Claude, GLM, DeepSeek, MiniMax via OpenAI-compatible interface)
+# LLM API (supports DeepSeek, OpenAI, GLM via OpenAI-compatible interface)
 llm:
-  scoring_model: "claude-3-5-haiku-20241022"    # Fast model for batch scoring
-  analysis_model: "claude-3-5-sonnet-20241022"   # Capable model for deep analysis
-  base_url: "https://api.anthropic.com/v1/"       # Change for other providers
-  api_key_env: "LLM_API_KEY"                      # Name of env var holding API key
+  scoring_model: "deepseek-chat"       # Fast model for batch scoring
+  analysis_model: "deepseek-chat"      # Capable model for deep analysis
+  base_url: "https://api.deepseek.com" # Change for other providers
+  api_key_env: "LLM_API_KEY"
 
-# Notification settings
+# Notification
 notification:
-  feishu_webhook_env: "FEISHU_WEBHOOK_URL"        # Name of env var holding Feishu webhook URL
-  language: "zh"                                    # Output language: zh, en, or mixed
+  feishu_webhook_env: "FEISHU_WEBHOOK_URL"  # Webhook fallback (optional)
+  language: "zh"                             # zh / en / mixed
+  compact_cards: false                       # Collapsible panel only works with App API
 
 # How far back to search for new papers (hours)
 search_timeframe_hours: 24
 
-# State directory for tracking seen papers (relative to repo root)
+# State directory
 state_dir: "state"
 
-# Zotero integration (optional) -- auto-archive HIGH-relevance papers
-# Enable by adding Zotero API credentials as GitHub Secrets.
-# Set both ZOTERO_USER_ID and ZOTERO_API_KEY to activate.
+# Zotero integration (optional)
 zotero:
   enabled: false
-  user_id_env: "ZOTERO_USER_ID"    # Find at zotero.org/settings -> Your user ID
-  api_key_env: "ZOTERO_API_KEY"     # Create at zotero.org/settings/keys -> New Private Key
-  collection_root: "DailyPapers"     # Root collection name in your Zotero library
+  collection_root: "DailyPapers"
+  archive_threshold: 9                # Only archive papers scoring >= this
 
-# Obsidian vault integration (optional) -- push daily summaries and paper cards to a Git repo
-# Enable by setting vault_repo_url and OBSIDIAN_VAULT_PAT.
+# Obsidian vault (optional)
 obsidian:
   enabled: false
-  vault_repo_url: ""                # e.g. "https://github.com/yourname/literature-vault.git"
-  vault_pat_env: "OBSIDIAN_VAULT_PAT"  # GitHub PAT with repo write access
+  vault_repo_url: ""
+
+# Feishu App (required for collapsible panel cards)
+feishu_app:
+  enabled: true
+  app_id_env: "FEISHU_APP_ID"
+  app_secret_env: "FEISHU_APP_SECRET"
+  chat_id_env: "FEISHU_CHAT_ID"
+  callback_base_url: ""               # Optional: interactive "Interested" button

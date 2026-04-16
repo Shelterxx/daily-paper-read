@@ -1,20 +1,14 @@
 name: Daily Literature Push
 
 on:
-  # PIPE-01: Daily scheduled cron trigger (UTC 01:00 = Beijing 09:00)
+  # 每天 UTC 01:00（北京 09:00）
   schedule:
     - cron: '0 1 * * *'
 
-  # PIPE-02: Manual workflow dispatch for on-demand execution
+  # 手动触发
   workflow_dispatch:
-    inputs:
-      config_path:
-        description: 'Path to config file'
-        required: false
-        default: 'config.yaml'
-        type: string
 
-# Prevent concurrent runs to avoid state file conflicts
+# 防止并发运行
 concurrency:
   group: literature-push
   cancel-in-progress: false
@@ -22,7 +16,7 @@ concurrency:
 jobs:
   push-literature:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # PIPE-03: Complete within 30 minutes
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -39,24 +33,35 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Create state directory
-        run: mkdir -p state
+      - name: Restore state from cache
+        uses: actions/cache@v4
+        with:
+          path: state/
+          key: literature-state-${{ github.run_id }}
+          restore-keys: |
+            literature-state-
 
-      - name: Run literature push pipeline
-        id: run-pipeline
+      - name: Run pipeline
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
-        run: |
-          python -m src.main "${{ github.event.inputs.config_path || 'config.yaml' }}"
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
+          SCI_SEARCH_API_TOKEN: ${{ secrets.SCI_SEARCH_API_TOKEN }}
+          SCI_SEARCH_API_URL: ${{ secrets.SCI_SEARCH_API_URL }}
+          ZOTERO_USER_ID: ${{ secrets.ZOTERO_USER_ID }}
+          ZOTERO_API_KEY: ${{ secrets.ZOTERO_API_KEY }}
+          OBSIDIAN_VAULT_PAT: ${{ secrets.OBSIDIAN_VAULT_PAT }}
+        run: python -m src.main
 
-      - name: Commit state file
-        if: always() && steps.run-pipeline.outcome != 'cancelled'
+      - name: Commit state files
+        if: always()
         run: |
           git config user.name "Literature Push Bot"
           git config user.email "bot@literature-push"
-          if [ -f state/seen_papers.json ]; then
-            git add state/seen_papers.json
-            git diff --cached --quiet || git commit -m "state: update seen papers $(date +%Y-%m-%d)"
+          # Commit state files for persistence
+          if [ -d state ] && [ "$(ls -A state 2>/dev/null)" ]; then
+            git add state/
+            git diff --cached --quiet || git commit -m "state: update $(date +%Y-%m-%d)"
             git push
           fi
