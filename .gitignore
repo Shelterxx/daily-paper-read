@@ -34,3 +34,7 @@ venv/
 paperRead/
 literature-search/
 sciencedirect-live-session-fetcher/
+
+# Claude Code / planning artifacts
+.claude/
+.planning/

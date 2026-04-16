@@ -61,6 +61,10 @@ class NotificationConfig(BaseModel):
         default="zh",
         description="Output language: zh, en, or mixed",
     )
+    compact_cards: bool = Field(
+        default=True,
+        description="Use collapsible panel layout for HIGH-relevance papers",
+    )
 
     @field_validator("language")
     @classmethod
@@ -69,6 +73,27 @@ class NotificationConfig(BaseModel):
         if v not in allowed:
             raise ValueError(f"language must be one of {allowed}, got '{v}'")
         return v
+
+
+class FeishuAppConfig(BaseModel):
+    """Feishu App settings for interactive card callbacks."""
+
+    enabled: bool = Field(
+        default=False,
+        description="Enable interactive button for on-demand Zotero archiving",
+    )
+    verification_token_env: str = Field(
+        default="FEISHU_VERIFICATION_TOKEN",
+        description="Env var name for card callback verification token",
+    )
+    encrypt_key_env: str = Field(
+        default="FEISHU_ENCRYPT_KEY",
+        description="Env var name for card callback encrypt key",
+    )
+    callback_base_url: str = Field(
+        default="",
+        description="Public URL where callback server is reachable, e.g. https://example.com",
+    )
 
 
 class RelevanceThresholds(BaseModel):
@@ -107,6 +132,12 @@ class ZoteroConfig(BaseModel):
     collection_root: str = Field(
         default="DailyPapers",
         description="Root collection name for archived papers",
+    )
+    archive_threshold: int = Field(
+        default=9,
+        ge=1,
+        le=10,
+        description="Only archive papers with score >= this threshold (higher than push threshold)",
     )
 
 
@@ -154,4 +185,8 @@ class AppConfig(BaseModel):
     obsidian: Optional[ObsidianConfig] = Field(
         default=None,
         description="Obsidian vault integration settings (optional)",
+    )
+    feishu_app: Optional[FeishuAppConfig] = Field(
+        default=None,
+        description="Feishu App settings for interactive callbacks (optional)",
     )

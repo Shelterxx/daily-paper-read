@@ -150,3 +150,24 @@ class StateManager:
         }
         self._history.append(entry)
         self._save_history()
+
+    def save_papers_for_callback(self, papers_data: list[dict]) -> None:
+        """Save analyzed paper data for the callback server to use.
+
+        Writes to state/papers_for_callback.json with atomic write pattern.
+        """
+        callback_file = self.state_dir / "papers_for_callback.json"
+        data = {
+            "papers": papers_data,
+            "saved_at": datetime.now().isoformat(),
+        }
+        fd, tmp_path = tempfile.mkstemp(dir=str(self.state_dir), suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            if callback_file.exists():
+                callback_file.unlink()
+            Path(tmp_path).rename(callback_file)
+        except Exception:
+            Path(tmp_path).unlink(missing_ok=True)
+            raise

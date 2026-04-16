@@ -87,36 +87,13 @@ class ZoteroArchiver:
 
         for ap in high_papers:
             try:
-                # ZTR-05: dedup check
-                existing_key = self._find_existing_item(ap.paper)
-                if existing_key:
-                    logger.info("Skipping existing paper: %s", ap.paper.title[:60])
+                result = await self.archive_single(ap, topic_to_key)
+                if result.get("skipped"):
                     skipped += 1
-                    continue
-
-                collection_key = topic_to_key.get(ap.topic_name)
-                if not collection_key:
-                    errors.append(f"No collection for topic '{ap.topic_name}'")
-                    continue
-
-                # ZTR-01: create item with metadata
-                item_key = self._create_item(ap.paper, collection_key)
-                if not item_key:
-                    errors.append(f"Failed to create item: {ap.paper.title[:60]}")
-                    continue
-
-                # ZTR-02: add AI tags
-                self._add_tags(item_key, ap.analysis.extracted_keywords)
-
-                # ZTR-03: attach analysis note
-                self._add_note(item_key, ap.analysis)
-
-                # ZTR-04: attach PDF link
-                self._attach_pdf(item_key, ap.paper)
-
-                archived += 1
-                logger.info("Archived: %s", ap.paper.title[:60])
-
+                elif result.get("archived"):
+                    archived += 1
+                elif result.get("error"):
+                    errors.append(result["error"])
             except Exception as e:
                 error_msg = f"Error archiving '{ap.paper.title[:40]}': {e}"
                 logger.error(error_msg)
@@ -127,6 +104,54 @@ class ZoteroArchiver:
             archived, skipped, len(errors),
         )
         return {"archived": archived, "skipped_existing": skipped, "errors": errors}
+
+    async def archive_single(
+        self, ap: AnalyzedPaper, topic_to_key: Optional[dict] = None
+    ) -> dict:
+        """Archive a single paper to Zotero on-demand.
+
+        Args:
+            ap: AnalyzedPaper to archive.
+            topic_to_key: Optional pre-built topic->collection_key mapping.
+                If None, will be built on-the-fly for this paper's topic.
+
+        Returns:
+            Dict with keys: archived (bool), item_key (str|None),
+            error (str|None), skipped (bool).
+        """
+        if not self.config.enabled:
+            return {"archived": False, "item_key": None, "error": "Zotero disabled", "skipped": False}
+
+        # Build collection mapping if not provided
+        if topic_to_key is None:
+            topic_to_key = self._ensure_collection_structure([ap.topic_name])
+
+        # ZTR-05: dedup check
+        existing_key = self._find_existing_item(ap.paper)
+        if existing_key:
+            logger.info("Skipping existing paper: %s", ap.paper.title[:60])
+            return {"archived": False, "item_key": existing_key, "error": None, "skipped": True}
+
+        collection_key = topic_to_key.get(ap.topic_name)
+        if not collection_key:
+            return {"archived": False, "item_key": None, "error": f"No collection for topic '{ap.topic_name}'", "skipped": False}
+
+        # ZTR-01: create item with metadata
+        item_key = self._create_item(ap.paper, collection_key)
+        if not item_key:
+            return {"archived": False, "item_key": None, "error": f"Failed to create item: {ap.paper.title[:60]}", "skipped": False}
+
+        # ZTR-02: add AI tags
+        self._add_tags(item_key, ap.analysis.extracted_keywords)
+
+        # ZTR-03: attach analysis note
+        self._add_note(item_key, ap.analysis)
+
+        # ZTR-04: attach PDF link
+        self._attach_pdf(item_key, ap.paper)
+
+        logger.info("Archived (on-demand): %s", ap.paper.title[:60])
+        return {"archived": True, "item_key": item_key, "error": None, "skipped": False}
 
     # -- Collection management --
 

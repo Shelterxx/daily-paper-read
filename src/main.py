@@ -368,6 +368,8 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
         notifier = FeishuNotifier(
             webhook_url=webhook_url,
             language=config.notification.language,
+            compact_cards=config.notification.compact_cards,
+            feishu_app_config=config.feishu_app,
         )
         try:
             notify_ok = await notifier.send(all_analyzed, topic_stats)
@@ -386,7 +388,12 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
     else:
         # No papers worth notifying about -- still notify "no new papers"
         webhook_url = os.environ.get(config.notification.feishu_webhook_env)
-        notifier = FeishuNotifier(webhook_url=webhook_url, language=config.notification.language)
+        notifier = FeishuNotifier(
+            webhook_url=webhook_url,
+            language=config.notification.language,
+            compact_cards=config.notification.compact_cards,
+            feishu_app_config=config.feishu_app,
+        )
         try:
             await notifier.send([], topic_stats)
         except Exception:
@@ -394,21 +401,63 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
 
     # 11. Zotero archiving (optional, independent fault tolerance)
     if config.zotero and config.zotero.enabled:
-        logger.info("Step 11: Archiving HIGH-relevance papers to Zotero...")
-        try:
-            zotero_archiver = ZoteroArchiver(config.zotero)
-            zotero_result = await zotero_archiver.archive_papers(high_analyzed)
+        if config.feishu_app and config.feishu_app.enabled:
+            # Interactive mode: save paper data for archive service, skip auto-archive
+            logger.info("Step 11: Interactive button enabled — saving papers for on-demand archiving")
+            try:
+                papers_data = []
+                for ap in high_analyzed:
+                    papers_data.append({
+                        "paper": ap.paper.model_dump(mode="json"),
+                        "analysis": ap.analysis.model_dump(mode="json"),
+                        "topic_name": ap.topic_name,
+                    })
+                state.save_papers_for_callback(papers_data)
+                logger.info(f"  Saved {len(papers_data)} papers for archive service")
+            except Exception as e:
+                logger.warning(f"  Failed to save papers for callback: {e}")
+        else:
+            # Auto-archive mode: archive papers above archive_threshold
+            threshold = config.zotero.archive_threshold
+            to_archive = [ap for ap in high_analyzed if ap.analysis.relevance_score >= threshold]
+            skipped_auto = len(high_analyzed) - len(to_archive)
             logger.info(
-                f"  Zotero: {zotero_result.get('archived', 0)} archived, "
-                f"{zotero_result.get('skipped_existing', 0)} duplicates skipped, "
-                f"{len(zotero_result.get('errors', []))} errors"
+                f"Step 11: Archiving {len(to_archive)}/{len(high_analyzed)} HIGH papers "
+                f"(score >= {threshold}) to Zotero, {skipped_auto} below archive threshold"
             )
-            if zotero_result.get('errors'):
-                for err in zotero_result['errors']:
-                    logger.warning(f"  Zotero error: {err}")
+            if to_archive:
+                try:
+                    zotero_archiver = ZoteroArchiver(config.zotero)
+                    zotero_result = await zotero_archiver.archive_papers(to_archive)
+                    logger.info(
+                        f"  Zotero: {zotero_result.get('archived', 0)} archived, "
+                        f"{zotero_result.get('skipped_existing', 0)} duplicates skipped, "
+                        f"{len(zotero_result.get('errors', []))} errors"
+                    )
+                    if zotero_result.get('errors'):
+                        for err in zotero_result['errors']:
+                            logger.warning(f"  Zotero error: {err}")
+                except Exception as e:
+                    logger.error(f"  Zotero archiving failed: {e}")
+                    stats["errors"].append(f"Zotero error: {e}")
+            else:
+                logger.info("  No papers above archive threshold, skipping")
+    elif config.feishu_app and config.feishu_app.enabled:
+        # Interactive mode enabled but Zotero not configured — still save papers
+        # (archive service handles Zotero connection independently)
+        logger.info("Step 11: Saving papers for archive service (Zotero not in pipeline config)")
+        try:
+            papers_data = []
+            for ap in high_analyzed:
+                papers_data.append({
+                    "paper": ap.paper.model_dump(mode="json"),
+                    "analysis": ap.analysis.model_dump(mode="json"),
+                    "topic_name": ap.topic_name,
+                })
+            state.save_papers_for_callback(papers_data)
+            logger.info(f"  Saved {len(papers_data)} papers for archive service")
         except Exception as e:
-            logger.error(f"  Zotero archiving failed: {e}")
-            stats["errors"].append(f"Zotero error: {e}")
+            logger.warning(f"  Failed to save papers for callback: {e}")
     else:
         logger.info("Step 11: Zotero integration not configured, skipping")
 
