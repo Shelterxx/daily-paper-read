@@ -423,7 +423,12 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
 
     # 11. Zotero archiving (optional, independent fault tolerance)
     if config.zotero and config.zotero.enabled:
-        if config.feishu_app and config.feishu_app.enabled:
+        has_interactive = (
+            config.feishu_app
+            and config.feishu_app.enabled
+            and config.feishu_app.callback_base_url
+        )
+        if has_interactive:
             # Interactive mode: save paper data for archive service, skip auto-archive
             logger.info("Step 11: Interactive button enabled — saving papers for on-demand archiving")
             try:
@@ -464,7 +469,7 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
                     stats["errors"].append(f"Zotero error: {e}")
             else:
                 logger.info("  No papers above archive threshold, skipping")
-    elif config.feishu_app and config.feishu_app.enabled:
+    elif has_interactive:
         # Interactive mode enabled but Zotero not configured — still save papers
         # (archive service handles Zotero connection independently)
         logger.info("Step 11: Saving papers for archive service (Zotero not in pipeline config)")

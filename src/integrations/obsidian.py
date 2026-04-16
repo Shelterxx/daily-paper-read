@@ -313,6 +313,16 @@ class ObsidianWriter:
                 logger.error(f"Git clone failed: {result.stderr.decode()}")
                 return False
 
+            # Set git identity (required in CI environments)
+            subprocess.run(
+                ["git", "config", "user.email", "bot@literature-push"],
+                cwd=str(vault_dir), capture_output=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Literature Push Bot"],
+                cwd=str(vault_dir), capture_output=True,
+            )
+
             # Copy generated files to vault
             vault_papers = vault_dir / "papers"
             vault_daily = vault_dir / "daily"
