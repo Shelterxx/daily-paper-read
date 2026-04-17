@@ -13,6 +13,7 @@ import logging
 import os
 import time
 import urllib.parse
+from datetime import datetime, timezone
 from collections import defaultdict
 from typing import Optional
 
@@ -131,13 +132,14 @@ class FeishuNotifier(Notifier):
 
         use_panels = self._use_app_api or self.compact_cards
 
+        date_str = datetime.now(timezone.utc).strftime("%m-%d")
         cards: list[dict] = []
         for topic_name, topic_papers in by_topic.items():
             n = len(topic_papers)
             if self.language == "zh":
-                title = f"📚 {topic_name}（推送 {n} 篇）"
+                title = f"📚 {topic_name}（{date_str}，推送 {n} 篇）"
             else:
-                title = f"📚 {topic_name} ({n} papers)"
+                title = f"📚 {topic_name} ({date_str}, {n} papers)"
 
             header = {
                 "title": {"tag": "plain_text", "content": title},
@@ -575,11 +577,12 @@ class FeishuNotifier(Notifier):
 
     async def _send_no_papers(self, topic_stats: dict) -> bool:
         """Send notification when no new papers found."""
+        date_str = datetime.now(timezone.utc).strftime("%m-%d")
         if self.language == "zh":
-            title = "📚 每日文献速递"
+            title = f"📚 每日文献速递（{date_str}）"
             text = "今日没有发现新的相关论文。"
         else:
-            title = "📚 Daily Literature Digest"
+            title = f"📚 Daily Literature Digest ({date_str})"
             text = "No new relevant papers found today."
 
         message = {
