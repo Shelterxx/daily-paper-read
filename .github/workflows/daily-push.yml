@@ -3,7 +3,7 @@ name: Daily Literature Push
 on:
   # 每天 UTC 01:00（北京 09:00）
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '1 1 * * *'
 
   # 手动触发
   workflow_dispatch:
