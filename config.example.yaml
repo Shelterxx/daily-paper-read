@@ -22,9 +22,19 @@
 # ──────────────────────────────────────────────────────────
 
 # Research topics: each topic defines a search scope with its own queries and thresholds
+# Tips for better precision:
+#   - Focus on PROBLEM DOMAIN + SELECTION CRITERIA, not specific techniques
+#   - Use "beyond traditional" / "novel approaches" to filter out old methods
+#   - The scoring prompt automatically excludes: traditional CMAQ/WRF-Chem simulation,
+#     pure monitoring/policy studies, indoor air quality, pure climate/carbon studies,
+#     and traditional bottom-up emission inventories
 research_topics:
   - name: "Your Topic Name"
-    description: "Natural language description of your research direction"
+    description: >
+      Describe what research you want to see. Focus on the problem domain
+      and what makes a paper relevant (e.g., novel methods, recent approaches).
+      Avoid listing specific techniques — use "includes but is not limited to"
+      to avoid missing new approaches you haven't thought of.
     max_push: 5                        # Max papers to push per topic per run
     relevance_thresholds:
       high: 8                          # Score >= this triggers deep analysis + push
@@ -54,8 +64,8 @@ sources:
 
 # LLM API (supports DeepSeek, OpenAI, GLM via OpenAI-compatible interface)
 llm:
-  scoring_model: "deepseek-chat"       # Fast model for batch scoring
-  analysis_model: "deepseek-chat"      # Capable model for deep analysis
+  scoring_model: "deepseek-v4-flash"     # Fast model for batch scoring
+  analysis_model: "deepseek-v4-flash"    # Capable model for deep analysis
   base_url: "https://api.deepseek.com" # Change for other providers
   api_key_env: "LLM_API_KEY"
 

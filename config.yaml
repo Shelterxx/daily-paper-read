@@ -3,22 +3,41 @@
 
 # Research topics: each topic defines a search scope with its own queries and thresholds
 research_topics:
-  - name: "排放清单与反演"
-    description: "Research on emission inventory development, inverse modeling for emission estimation, source apportionment, data assimilation for atmospheric emissions, satellite-based emission retrieval, bottom-up and top-down emission estimation methods, VOCs, NOx, PM2.5 emission sources, and anthropogenic/biogenic emission characterization"
-    max_push: 3
+  - name: "空气质量智能预测"
+    description: >
+      Air quality prediction and forecasting using novel or recently developed
+      computational methods. Interested in any new approach that goes beyond
+      traditional chemical transport model simulation (CMAQ, WRF-Chem, GEOS-Chem)
+      for predicting PM2.5, O3, NO2 and other pollutants. This includes but is
+      not limited to machine learning, deep learning, data-driven models,
+      hybrid physics-data approaches, spatiotemporal modeling, and new
+      statistical or mathematical frameworks.
+    max_push: 5
     relevance_thresholds:
       high: 8
       medium: 7
 
-  - name: "大气环境智能计算"
-    description: "Application of machine learning, deep learning, data assimilation, remote sensing inversion, spatiotemporal modeling, and physics-informed neural networks to atmospheric environment research, including air quality prediction, emission estimation, satellite-based monitoring, model emulation, uncertainty quantification, and data-driven atmospheric chemistry modeling"
-    max_push: 3
+  - name: "排放反演与遥感"
+    description: >
+      Top-down emission estimation and satellite remote sensing for atmospheric
+      pollutants. Interested in inverse modeling, satellite-based emission retrieval,
+      data assimilation for emission optimization, source apportionment with modern
+      approaches, and any new methods for estimating NOx, SO2, VOCs, PM2.5, CH4
+      emissions from observations. Excludes traditional bottom-up emission inventory
+      compilation using emission factors and activity data.
+    max_push: 5
     relevance_thresholds:
       high: 8
       medium: 7
 
-  - name: "大气环境"
-    description: "Research on atmospheric pollution mechanisms, air quality monitoring and assessment, atmospheric chemistry, aerosol and ozone formation, source apportionment, health effects of air pollution, climate-air quality interactions, and regional/urban air quality management"
+  - name: "大气环境计算新方法"
+    description: >
+      Recent computational and analytical methods applied to atmospheric environment
+      research. Covers new approaches in atmospheric chemistry modeling, remote sensing
+      inversion, air quality data analysis, model emulation and acceleration,
+      uncertainty quantification, and environmental data science. Any paper that
+      introduces or applies a recently developed methodology to atmospheric
+      environment problems, beyond conventional statistical or modeling approaches.
     max_push: 3
     relevance_thresholds:
       high: 8
@@ -38,8 +57,8 @@ sources:
 
 # LLM API configuration (supports Claude, GLM, DeepSeek, MiniMax via OpenAI-compatible interface)
 llm:
-  scoring_model: "deepseek-chat"    # Fast model for batch scoring
-  analysis_model: "deepseek-chat"   # Capable model for deep analysis
+  scoring_model: "deepseek-v4-flash"    # Fast model for batch scoring
+  analysis_model: "deepseek-v4-flash"   # Capable model for deep analysis
   base_url: "https://api.deepseek.com"       # Change for other providers
   api_key_env: "LLM_API_KEY"                      # Name of env var holding API key
 

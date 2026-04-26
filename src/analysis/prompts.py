@@ -40,6 +40,15 @@ Score from 1-10:
 - 4-6: Tangentially related, worth knowing about
 - 7-10: Directly relevant, significant contribution to the research area
 
+IMPORTANT — Score LOW (1-3) for papers that are:
+- Traditional CMAQ/WRF-Chem simulation studies WITHOUT AI or novel methodology
+- Pure air quality monitoring, policy evaluation, or health impact studies WITHOUT methodological innovation
+- Indoor air quality or occupational health studies
+- Pure climate change or carbon footprint studies unrelated to atmospheric pollution
+- Traditional bottom-up emission inventory compilation (emission factors, activity data) WITHOUT inverse modeling or AI
+
+Only score HIGH (8-10) for papers that demonstrate clear methodological innovation using AI, machine learning, deep learning, data assimilation, or novel computational approaches.
+
 Also extract 3-5 key technical terms/concepts from the paper.
 
 {language_instruction}
