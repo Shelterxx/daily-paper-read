@@ -128,6 +128,7 @@ class ResearchTopic(BaseModel):
     sources: SourcesConfig = Field(default_factory=SourcesConfig)
     max_push: int = Field(default=20, description="Max papers to push per topic per run")
     relevance_thresholds: RelevanceThresholds = Field(default_factory=RelevanceThresholds)
+    zotero_archive: bool = Field(default=True, description="Archive HIGH papers from this topic to Zotero")
 
 
 class ZoteroConfig(BaseModel):

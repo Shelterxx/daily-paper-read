@@ -446,11 +446,18 @@ async def run_pipeline(config_path: str = "config.yaml") -> dict:
         else:
             # Auto-archive mode: archive papers above archive_threshold
             threshold = config.zotero.archive_threshold
-            to_archive = [ap for ap in high_analyzed if ap.analysis.relevance_score >= threshold]
+            # Exclude topics with zotero_archive=false
+            no_archive_topics = {t.name for t in config.research_topics if not t.zotero_archive}
+            to_archive = [
+                ap for ap in high_analyzed
+                if ap.analysis.relevance_score >= threshold
+                and ap.topic_name not in no_archive_topics
+            ]
             skipped_auto = len(high_analyzed) - len(to_archive)
+            excluded_topics_str = ", ".join(no_archive_topics) if no_archive_topics else "none"
             logger.info(
                 f"Step 11: Archiving {len(to_archive)}/{len(high_analyzed)} HIGH papers "
-                f"(score >= {threshold}) to Zotero, {skipped_auto} below archive threshold"
+                f"(score >= {threshold}, excluded topics: {excluded_topics_str}) to Zotero"
             )
             if to_archive:
                 try:

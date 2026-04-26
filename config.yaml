@@ -43,6 +43,20 @@ research_topics:
       high: 8
       medium: 7
 
+  - name: "固废危废智能监管"
+    description: >
+      AI and computer vision methods for solid waste and hazardous waste management
+      and regulation. Includes visual recognition and detection of illegal waste dumping,
+      waste classification using deep learning, satellite/drone imagery analysis for
+      waste site monitoring, intelligent inspection systems for hazardous waste
+      transportation and storage, and any novel computational approach applied to
+      waste governance and environmental compliance.
+    max_push: 3
+    relevance_thresholds:
+      high: 8
+      medium: 7
+    zotero_archive: false
+
 # Global source toggles (individual topics can override)
 sources:
   arxiv:
